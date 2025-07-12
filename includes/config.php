@@ -286,11 +286,19 @@ function paginate($total_records, $records_per_page, $current_page, $url_pattern
 function log_activity($action, $details = '') {
     global $pdo;
     
+    if ($pdo === null) {
+        return;
+    }
+    
     $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
     $ip = get_client_ip();
     
-    $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$user_id, $action, $details, $ip, $_SERVER['HTTP_USER_AGENT'] ?? '']);
+    try {
+        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$user_id, $action, $details, $ip, $_SERVER['HTTP_USER_AGENT'] ?? '']);
+    } catch (Exception $e) {
+        error_log("Activity log hatası: " . $e->getMessage());
+    }
 }
 
 // Rate limiting

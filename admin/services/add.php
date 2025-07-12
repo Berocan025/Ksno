@@ -20,58 +20,43 @@ if (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT) {
 }
 $_SESSION['last_activity'] = time();
 
+$message = '';
+
 // Form gönderildi mi?
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF token kontrolü
-    if (!verify_csrf_token($_POST['csrf_token'])) {
-        show_message('Güvenlik hatası!', 'error');
-        redirect('add.php');
-    }
-    
-    // Form verilerini al
     $title = clean_input($_POST['title']);
     $description = clean_input($_POST['description']);
     $icon = clean_input($_POST['icon']);
-    $content = clean_input($_POST['content']);
-    $is_active = isset($_POST['is_active']) ? 1 : 0;
     $sort_order = (int)$_POST['sort_order'];
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
     
-    // Validasyon
-    $errors = [];
-    
-    if (empty($title)) {
-        $errors[] = 'Hizmet başlığı gereklidir.';
-    }
-    
-    if (empty($description)) {
-        $errors[] = 'Hizmet açıklaması gereklidir.';
-    }
-    
-    if (empty($icon)) {
-        $errors[] = 'İkon seçimi gereklidir.';
-    }
-    
-    // Hata yoksa kaydet
-    if (empty($errors)) {
-        $stmt = $pdo->prepare("INSERT INTO services (title, description, icon, content, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?)");
-        
-        if ($stmt->execute([$title, $description, $icon, $content, $is_active, $sort_order])) {
-            log_activity('service_added', "Yeni hizmet eklendi: $title");
-            show_message('Hizmet başarıyla eklendi.', 'success');
-            redirect('index.php');
-        } else {
-            show_message('Hizmet eklenirken bir hata oluştu.', 'error');
+    // Resim yükleme
+    $image_path = '';
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        $upload_dir = '../../assets/uploads/services/';
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
         }
-    } else {
-        show_message(implode('<br>', $errors), 'error');
+        
+        $file_extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+        $new_filename = 'service_' . time() . '.' . $file_extension;
+        $upload_path = $upload_dir . $new_filename;
+        
+        if (in_array($file_extension, ALLOWED_IMAGE_TYPES) && move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
+            $image_path = 'assets/uploads/services/' . $new_filename;
+        }
+    }
+    
+    try {
+        $stmt = $pdo->prepare("INSERT INTO services (title, description, icon, image_path, sort_order, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+        if ($stmt->execute([$title, $description, $icon, $image_path, $sort_order, $is_active])) {
+            log_activity('service_added', "Yeni hizmet eklendi: $title");
+            redirect('index.php');
+        }
+    } catch (Exception $e) {
+        $message = 'Hizmet eklenirken hata oluştu: ' . $e->getMessage();
     }
 }
-
-// CSRF token oluştur
-$csrf_token = generate_csrf_token();
-
-// Mesaj göster
-$message = get_message();
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -192,14 +177,14 @@ $message = get_message();
             color: white;
         }
         
-        .form-control {
-            border: 2px solid #e9ecef;
+        .form-control, .form-select {
             border-radius: 10px;
+            border: 2px solid #e9ecef;
             padding: 0.75rem;
             transition: all 0.3s ease;
         }
         
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.25);
         }
@@ -213,14 +198,14 @@ $message = get_message();
         .icon-preview {
             font-size: 2rem;
             color: var(--primary-color);
-            margin-top: 0.5rem;
+            margin: 1rem 0;
         }
     </style>
 </head>
 <body>
-    <!-- Admin Header -->
+    <!-- Header -->
     <header class="admin-header">
-        <div class="container-fluid">
+        <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <div class="logo">
@@ -231,11 +216,16 @@ $message = get_message();
                     </div>
                 </div>
                 <div class="col-md-6 text-end">
-                    <div class="d-flex align-items-center justify-content-end">
-                        <span class="me-3">Hoş geldin, <?php echo $_SESSION['username']; ?></span>
-                        <a href="../logout.php" class="btn btn-outline-light btn-sm">
-                            <i class="fas fa-sign-out-alt me-1"></i>Çıkış
-                        </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-2"></i><?php echo $_SESSION['username']; ?>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="../dashboard.php"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                            <li><a class="dropdown-item" href="../settings.php"><i class="fas fa-cog me-2"></i>Ayarlar</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Çıkış</a></li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -245,150 +235,130 @@ $message = get_message();
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2">
-                <div class="sidebar">
-                    <nav class="nav flex-column">
-                        <a class="nav-link" href="../index.php">
-                            <i class="fas fa-tachometer-alt"></i>Dashboard
-                        </a>
-                        <a class="nav-link" href="../content/">
-                            <i class="fas fa-edit"></i>İçerik Yönetimi
-                        </a>
-                        <a class="nav-link" href="../texts/">
-                            <i class="fas fa-font"></i>Metin Yönetimi
-                        </a>
-                        <a class="nav-link" href="../portfolio/">
-                            <i class="fas fa-briefcase"></i>Portföy Yönetimi
-                        </a>
-                        <a class="nav-link" href="../gallery/">
-                            <i class="fas fa-images"></i>Galeri Yönetimi
-                        </a>
-                        <a class="nav-link active" href="index.php">
-                            <i class="fas fa-cogs"></i>Hizmet Yönetimi
-                        </a>
-                        <a class="nav-link" href="../messages/">
-                            <i class="fas fa-envelope"></i>Mesaj Yönetimi
-                        </a>
-                        <a class="nav-link" href="../settings/">
-                            <i class="fas fa-cog"></i>Site Ayarları
-                        </a>
-                    </nav>
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="../dashboard.php">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="index.php">
+                                <i class="fas fa-cogs"></i>
+                                Hizmetler
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../portfolio/index.php">
+                                <i class="fas fa-briefcase"></i>
+                                Portföy
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../gallery/index.php">
+                                <i class="fas fa-images"></i>
+                                Galeri
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../messages/index.php">
+                                <i class="fas fa-envelope"></i>
+                                Mesajlar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../texts/index.php">
+                                <i class="fas fa-file-alt"></i>
+                                Site Metinleri
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../settings.php">
+                                <i class="fas fa-cog"></i>
+                                Ayarlar
+                            </a>
+                        </li>
+                    </ul>
                 </div>
-            </div>
+            </nav>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10">
-                <div class="main-content">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h1 class="h3 mb-0">Yeni Hizmet Ekle</h1>
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Yeni Hizmet Ekle</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
                         <a href="index.php" class="btn btn-admin">
                             <i class="fas fa-arrow-left me-2"></i>Geri Dön
                         </a>
                     </div>
+                </div>
 
-                    <?php if ($message): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <?php echo $message; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <?php if ($message): ?>
+                <div class="alert alert-danger">
+                    <?php echo $message; ?>
+                </div>
+                <?php endif; ?>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Hizmet Bilgileri</h5>
                     </div>
-                    <?php endif; ?>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Hizmet Bilgileri</h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" class="needs-validation" novalidate>
-                                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                                
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="mb-3">
-                                            <label for="title" class="form-label">Hizmet Başlığı *</label>
-                                            <input type="text" class="form-control" id="title" name="title" value="<?php echo isset($_POST['title']) ? htmlspecialchars($_POST['title']) : ''; ?>" required>
-                                            <div class="invalid-feedback">
-                                                Hizmet başlığı gereklidir.
-                                            </div>
-                                        </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">Hizmet Başlığı *</label>
+                                        <input type="text" class="form-control" id="title" name="title" required>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="icon" class="form-label">İkon *</label>
-                                            <select class="form-control" id="icon" name="icon" required>
-                                                <option value="">İkon Seçin</option>
-                                                <option value="fas fa-video" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fas fa-video') ? 'selected' : ''; ?>>Video (fas fa-video)</option>
-                                                <option value="fab fa-facebook" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fab fa-facebook') ? 'selected' : ''; ?>>Facebook (fab fa-facebook)</option>
-                                                <option value="fas fa-star" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fas fa-star') ? 'selected' : ''; ?>>Star (fas fa-star)</option>
-                                                <option value="fab fa-facebook-f" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fab fa-facebook-f') ? 'selected' : ''; ?>>Facebook F (fab fa-facebook-f)</option>
-                                                <option value="fas fa-envelope" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fas fa-envelope') ? 'selected' : ''; ?>>Envelope (fas fa-envelope)</option>
-                                                <option value="fab fa-telegram-plane" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fab fa-telegram-plane') ? 'selected' : ''; ?>>Telegram (fab fa-telegram-plane)</option>
-                                                <option value="fas fa-bullhorn" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fas fa-bullhorn') ? 'selected' : ''; ?>>Bullhorn (fas fa-bullhorn)</option>
-                                                <option value="fas fa-chart-line" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fas fa-chart-line') ? 'selected' : ''; ?>>Chart Line (fas fa-chart-line)</option>
-                                                <option value="fas fa-users" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fas fa-users') ? 'selected' : ''; ?>>Users (fas fa-users)</option>
-                                                <option value="fas fa-cog" <?php echo (isset($_POST['icon']) && $_POST['icon'] === 'fas fa-cog') ? 'selected' : ''; ?>>Cog (fas fa-cog)</option>
-                                            </select>
-                                            <div class="invalid-feedback">
-                                                İkon seçimi gereklidir.
-                                            </div>
-                                            <div id="icon-preview" class="icon-preview"></div>
-                                        </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Açıklama *</label>
+                                        <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="icon" class="form-label">İkon (Font Awesome) *</label>
+                                        <input type="text" class="form-control" id="icon" name="icon" placeholder="fas fa-rocket" required>
+                                        <div class="icon-preview" id="iconPreview"></div>
+                                        <small class="text-muted">Font Awesome ikon sınıfını girin (örn: fas fa-rocket)</small>
                                     </div>
                                 </div>
                                 
-                                <div class="mb-3">
-                                    <label for="description" class="form-label">Kısa Açıklama *</label>
-                                    <textarea class="form-control" id="description" name="description" rows="3" required><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description']) : ''; ?></textarea>
-                                    <div class="invalid-feedback">
-                                        Hizmet açıklaması gereklidir.
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="image" class="form-label">Hizmet Görseli</label>
+                                        <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                        <small class="text-muted">Önerilen boyut: 400x300px</small>
                                     </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="content" class="form-label">Detaylı İçerik</label>
-                                    <textarea class="form-control" id="content" name="content" rows="8"><?php echo isset($_POST['content']) ? htmlspecialchars($_POST['content']) : ''; ?></textarea>
-                                    <div class="form-text">
-                                        Hizmet hakkında detaylı bilgi verebilirsiniz.
+                                    
+                                    <div class="mb-3">
+                                        <label for="sort_order" class="form-label">Sıralama</label>
+                                        <input type="number" class="form-control" id="sort_order" name="sort_order" value="0" min="0">
                                     </div>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="sort_order" class="form-label">Sıralama</label>
-                                            <input type="number" class="form-control" id="sort_order" name="sort_order" value="<?php echo isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0; ?>" min="0">
-                                            <div class="form-text">
-                                                Düşük sayılar önce gösterilir.
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" <?php echo (isset($_POST['is_active']) && $_POST['is_active']) ? 'checked' : ''; ?>>
-                                                <label class="form-check-label" for="is_active">
-                                                    Aktif
-                                                </label>
-                                            </div>
-                                            <div class="form-text">
-                                                Aktif hizmetler sitede görünür.
-                                            </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                            <label class="form-check-label" for="is_active">
+                                                Aktif
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div class="d-flex justify-content-end gap-2">
-                                    <a href="index.php" class="btn btn-secondary">
-                                        <i class="fas fa-times me-2"></i>İptal
-                                    </a>
-                                    <button type="submit" class="btn btn-admin">
-                                        <i class="fas fa-save me-2"></i>Hizmeti Kaydet
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
+                            
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-admin">
+                                    <i class="fas fa-save me-2"></i>Hizmeti Kaydet
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     </div>
 
@@ -397,33 +367,15 @@ $message = get_message();
     
     <script>
         // İkon önizleme
-        document.getElementById('icon').addEventListener('change', function() {
-            const preview = document.getElementById('icon-preview');
-            const selectedIcon = this.value;
-            
-            if (selectedIcon) {
-                preview.innerHTML = `<i class="${selectedIcon}"></i>`;
+        document.getElementById('icon').addEventListener('input', function() {
+            const icon = this.value;
+            const preview = document.getElementById('iconPreview');
+            if (icon) {
+                preview.innerHTML = `<i class="${icon}"></i>`;
             } else {
                 preview.innerHTML = '';
             }
         });
-        
-        // Form validasyonu
-        (function() {
-            'use strict';
-            window.addEventListener('load', function() {
-                var forms = document.getElementsByClassName('needs-validation');
-                var validation = Array.prototype.filter.call(forms, function(form) {
-                    form.addEventListener('submit', function(event) {
-                        if (form.checkValidity() === false) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                        }
-                        form.classList.add('was-validated');
-                    }, false);
-                });
-            }, false);
-        })();
     </script>
 </body>
 </html>

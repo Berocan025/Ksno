@@ -3,7 +3,7 @@
  * BonusBoss Casino Yayıncısı Portföy Sitesi
  * Yazılımcı: BERAT K
  * 
- * Admin Panel - Portföy Projesi Ekleme
+ * Admin Panel - Portföy Ekleme
  */
 
 require_once '../../includes/config.php';
@@ -20,83 +20,63 @@ if (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT) {
 }
 $_SESSION['last_activity'] = time();
 
+$message = '';
+
 // Kategorileri getir
-$categories = $pdo->query("SELECT * FROM categories WHERE type = 'portfolio' ORDER BY name")->fetchAll();
+$categories = [];
+try {
+    $stmt = $pdo->query("SELECT * FROM categories WHERE is_active = 1 ORDER BY name ASC");
+    $categories = $stmt->fetchAll();
+} catch (Exception $e) {
+    $message = 'Kategoriler yüklenirken hata oluştu: ' . $e->getMessage();
+}
 
 // Form gönderildi mi?
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF token kontrolü
-    if (!verify_csrf_token($_POST['csrf_token'])) {
-        show_message('Güvenlik hatası!', 'error');
-        redirect('add.php');
-    }
-    
-    // Form verilerini al
     $title = clean_input($_POST['title']);
     $description = clean_input($_POST['description']);
     $content = clean_input($_POST['content']);
     $category_id = (int)$_POST['category_id'];
-    $client = clean_input($_POST['client']);
+    $client_name = clean_input($_POST['client_name']);
     $project_date = clean_input($_POST['project_date']);
     $project_url = clean_input($_POST['project_url']);
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
-    $sort_order = (int)$_POST['sort_order'];
-    
-    // Validasyon
-    $errors = [];
-    
-    if (empty($title)) {
-        $errors[] = 'Proje başlığı gereklidir.';
-    }
-    
-    if (empty($description)) {
-        $errors[] = 'Proje açıklaması gereklidir.';
-    }
-    
-    if ($category_id <= 0) {
-        $errors[] = 'Kategori seçimi gereklidir.';
-    }
     
     // Resim yükleme
-    $image = '';
+    $image_path = '';
     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $upload_result = upload_file($_FILES['image'], UPLOAD_PATH);
-        if ($upload_result) {
-            $image = $upload_result;
-        } else {
-            $errors[] = 'Resim yüklenirken bir hata oluştu.';
+        $upload_dir = '../../assets/uploads/portfolio/';
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+        
+        $file_extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+        $new_filename = 'portfolio_' . time() . '.' . $file_extension;
+        $upload_path = $upload_dir . $new_filename;
+        
+        if (in_array($file_extension, ALLOWED_IMAGE_TYPES) && move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
+            $image_path = 'assets/uploads/portfolio/' . $new_filename;
         }
     }
     
-    // Hata yoksa kaydet
-    if (empty($errors)) {
-        $stmt = $pdo->prepare("INSERT INTO portfolio (title, description, content, image, category_id, client, project_date, project_url, is_featured, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        
-        if ($stmt->execute([$title, $description, $content, $image, $category_id, $client, $project_date, $project_url, $is_featured, $is_active, $sort_order])) {
-            log_activity('portfolio_added', "Yeni portföy projesi eklendi: $title");
-            show_message('Portföy projesi başarıyla eklendi.', 'success');
+    try {
+        $stmt = $pdo->prepare("INSERT INTO portfolio (title, description, content, category_id, client_name, project_date, project_url, image_path, is_featured, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        if ($stmt->execute([$title, $description, $content, $category_id, $client_name, $project_date, $project_url, $image_path, $is_featured, $is_active])) {
+            log_activity('portfolio_added', "Yeni portföy eklendi: $title");
             redirect('index.php');
-        } else {
-            show_message('Portföy projesi eklenirken bir hata oluştu.', 'error');
         }
-    } else {
-        show_message(implode('<br>', $errors), 'error');
+    } catch (Exception $e) {
+        $message = 'Portföy eklenirken hata oluştu: ' . $e->getMessage();
     }
 }
-
-// CSRF token oluştur
-$csrf_token = generate_csrf_token();
-
-// Mesaj göster
-$message = get_message();
 ?>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portföy Projesi Ekle - BonusBoss Admin</title>
+    <title>Portföy Ekle - BonusBoss Admin</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -210,14 +190,14 @@ $message = get_message();
             color: white;
         }
         
-        .form-control {
-            border: 2px solid #e9ecef;
+        .form-control, .form-select {
             border-radius: 10px;
+            border: 2px solid #e9ecef;
             padding: 0.75rem;
             transition: all 0.3s ease;
         }
         
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.25);
         }
@@ -227,19 +207,12 @@ $message = get_message();
             color: var(--dark-color);
             margin-bottom: 0.5rem;
         }
-        
-        .image-preview {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 10px;
-            margin-top: 1rem;
-        }
     </style>
 </head>
 <body>
-    <!-- Admin Header -->
+    <!-- Header -->
     <header class="admin-header">
-        <div class="container-fluid">
+        <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <div class="logo">
@@ -250,11 +223,16 @@ $message = get_message();
                     </div>
                 </div>
                 <div class="col-md-6 text-end">
-                    <div class="d-flex align-items-center justify-content-end">
-                        <span class="me-3">Hoş geldin, <?php echo $_SESSION['username']; ?></span>
-                        <a href="../logout.php" class="btn btn-outline-light btn-sm">
-                            <i class="fas fa-sign-out-alt me-1"></i>Çıkış
-                        </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-2"></i><?php echo $_SESSION['username']; ?>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="../dashboard.php"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                            <li><a class="dropdown-item" href="../settings.php"><i class="fas fa-cog me-2"></i>Ayarlar</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Çıkış</a></li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -264,229 +242,166 @@ $message = get_message();
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2">
-                <div class="sidebar">
-                    <nav class="nav flex-column">
-                        <a class="nav-link" href="../index.php">
-                            <i class="fas fa-tachometer-alt"></i>Dashboard
-                        </a>
-                        <a class="nav-link" href="../content/">
-                            <i class="fas fa-edit"></i>İçerik Yönetimi
-                        </a>
-                        <a class="nav-link" href="../texts/">
-                            <i class="fas fa-font"></i>Metin Yönetimi
-                        </a>
-                        <a class="nav-link active" href="index.php">
-                            <i class="fas fa-briefcase"></i>Portföy Yönetimi
-                        </a>
-                        <a class="nav-link" href="../gallery/">
-                            <i class="fas fa-images"></i>Galeri Yönetimi
-                        </a>
-                        <a class="nav-link" href="../services/">
-                            <i class="fas fa-cogs"></i>Hizmet Yönetimi
-                        </a>
-                        <a class="nav-link" href="../messages/">
-                            <i class="fas fa-envelope"></i>Mesaj Yönetimi
-                        </a>
-                        <a class="nav-link" href="../settings/">
-                            <i class="fas fa-cog"></i>Site Ayarları
-                        </a>
-                    </nav>
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="../dashboard.php">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../services/index.php">
+                                <i class="fas fa-cogs"></i>
+                                Hizmetler
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="index.php">
+                                <i class="fas fa-briefcase"></i>
+                                Portföy
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../gallery/index.php">
+                                <i class="fas fa-images"></i>
+                                Galeri
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../messages/index.php">
+                                <i class="fas fa-envelope"></i>
+                                Mesajlar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../texts/index.php">
+                                <i class="fas fa-file-alt"></i>
+                                Site Metinleri
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="../settings.php">
+                                <i class="fas fa-cog"></i>
+                                Ayarlar
+                            </a>
+                        </li>
+                    </ul>
                 </div>
-            </div>
+            </nav>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10">
-                <div class="main-content">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h1 class="h3 mb-0">Yeni Portföy Projesi Ekle</h1>
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Yeni Portföy Ekle</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
                         <a href="index.php" class="btn btn-admin">
                             <i class="fas fa-arrow-left me-2"></i>Geri Dön
                         </a>
                     </div>
+                </div>
 
-                    <?php if ($message): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <?php echo $message; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <?php if ($message): ?>
+                <div class="alert alert-danger">
+                    <?php echo $message; ?>
+                </div>
+                <?php endif; ?>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Portföy Bilgileri</h5>
                     </div>
-                    <?php endif; ?>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Proje Bilgileri</h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" class="needs-validation" enctype="multipart/form-data" novalidate>
-                                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                                
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="mb-3">
-                                            <label for="title" class="form-label">Proje Başlığı *</label>
-                                            <input type="text" class="form-control" id="title" name="title" value="<?php echo isset($_POST['title']) ? htmlspecialchars($_POST['title']) : ''; ?>" required>
-                                            <div class="invalid-feedback">
-                                                Proje başlığı gereklidir.
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">Proje Başlığı *</label>
+                                        <input type="text" class="form-control" id="title" name="title" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Kısa Açıklama *</label>
+                                        <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="content" class="form-label">Detaylı İçerik</label>
+                                        <textarea class="form-control" id="content" name="content" rows="8"></textarea>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="client_name" class="form-label">Müşteri Adı</label>
+                                                <input type="text" class="form-control" id="client_name" name="client_name">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="project_date" class="form-label">Proje Tarihi</label>
+                                                <input type="date" class="form-control" id="project_date" name="project_date">
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="category_id" class="form-label">Kategori *</label>
-                                            <select class="form-control" id="category_id" name="category_id" required>
-                                                <option value="">Kategori Seçin</option>
-                                                <?php foreach ($categories as $category): ?>
-                                                <option value="<?php echo $category['id']; ?>" <?php echo (isset($_POST['category_id']) && $_POST['category_id'] == $category['id']) ? 'selected' : ''; ?>>
-                                                    <?php echo htmlspecialchars($category['name']); ?>
-                                                </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <div class="invalid-feedback">
-                                                Kategori seçimi gereklidir.
-                                            </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="project_url" class="form-label">Proje URL</label>
+                                        <input type="url" class="form-control" id="project_url" name="project_url" placeholder="https://example.com">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="category_id" class="form-label">Kategori *</label>
+                                        <select class="form-select" id="category_id" name="category_id" required>
+                                            <option value="">Kategori Seçin</option>
+                                            <?php foreach ($categories as $category): ?>
+                                            <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="image" class="form-label">Proje Görseli</label>
+                                        <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                        <small class="text-muted">Önerilen boyut: 800x600px</small>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured">
+                                            <label class="form-check-label" for="is_featured">
+                                                Öne Çıkan Proje
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                            <label class="form-check-label" for="is_active">
+                                                Aktif
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div class="mb-3">
-                                    <label for="description" class="form-label">Kısa Açıklama *</label>
-                                    <textarea class="form-control" id="description" name="description" rows="3" required><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description']) : ''; ?></textarea>
-                                    <div class="invalid-feedback">
-                                        Proje açıklaması gereklidir.
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="content" class="form-label">Detaylı İçerik</label>
-                                    <textarea class="form-control" id="content" name="content" rows="8"><?php echo isset($_POST['content']) ? htmlspecialchars($_POST['content']) : ''; ?></textarea>
-                                    <div class="form-text">
-                                        Proje hakkında detaylı bilgi verebilirsiniz.
-                                    </div>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="client" class="form-label">Müşteri</label>
-                                            <input type="text" class="form-control" id="client" name="client" value="<?php echo isset($_POST['client']) ? htmlspecialchars($_POST['client']) : ''; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="project_date" class="form-label">Proje Tarihi</label>
-                                            <input type="date" class="form-control" id="project_date" name="project_date" value="<?php echo isset($_POST['project_date']) ? htmlspecialchars($_POST['project_date']) : ''; ?>">
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="project_url" class="form-label">Proje URL</label>
-                                    <input type="url" class="form-control" id="project_url" name="project_url" value="<?php echo isset($_POST['project_url']) ? htmlspecialchars($_POST['project_url']) : ''; ?>" placeholder="https://example.com">
-                                    <div class="form-text">
-                                        Projenin canlı linkini ekleyebilirsiniz.
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="image" class="form-label">Proje Görseli</label>
-                                    <input type="file" class="form-control" id="image" name="image" accept="image/*" onchange="previewImage(this)">
-                                    <div class="form-text">
-                                        Önerilen boyut: 800x600px, Maksimum: 5MB
-                                    </div>
-                                    <div id="image-preview"></div>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="sort_order" class="form-label">Sıralama</label>
-                                            <input type="number" class="form-control" id="sort_order" name="sort_order" value="<?php echo isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0; ?>" min="0">
-                                            <div class="form-text">
-                                                Düşük sayılar önce gösterilir.
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured" <?php echo (isset($_POST['is_featured']) && $_POST['is_featured']) ? 'checked' : ''; ?>>
-                                                <label class="form-check-label" for="is_featured">
-                                                    Öne Çıkan Proje
-                                                </label>
-                                            </div>
-                                            <div class="form-text">
-                                                Öne çıkan projeler ana sayfada gösterilir.
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" <?php echo (isset($_POST['is_active']) && $_POST['is_active']) ? 'checked' : ''; ?>>
-                                                <label class="form-check-label" for="is_active">
-                                                    Aktif
-                                                </label>
-                                            </div>
-                                            <div class="form-text">
-                                                Aktif projeler sitede görünür.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="d-flex justify-content-end gap-2">
-                                    <a href="index.php" class="btn btn-secondary">
-                                        <i class="fas fa-times me-2"></i>İptal
-                                    </a>
-                                    <button type="submit" class="btn btn-admin">
-                                        <i class="fas fa-save me-2"></i>Projeyi Kaydet
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
+                            
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-admin">
+                                    <i class="fas fa-save me-2"></i>Portföyü Kaydet
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        // Resim önizleme
-        function previewImage(input) {
-            const preview = document.getElementById('image-preview');
-            
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    preview.innerHTML = `<img src="${e.target.result}" class="image-preview" alt="Önizleme">`;
-                }
-                
-                reader.readAsDataURL(input.files[0]);
-            } else {
-                preview.innerHTML = '';
-            }
-        }
-        
-        // Form validasyonu
-        (function() {
-            'use strict';
-            window.addEventListener('load', function() {
-                var forms = document.getElementsByClassName('needs-validation');
-                var validation = Array.prototype.filter.call(forms, function(form) {
-                    form.addEventListener('submit', function(event) {
-                        if (form.checkValidity() === false) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                        }
-                        form.classList.add('was-validated');
-                    }, false);
-                });
-            }, false);
-        })();
-    </script>
 </body>
 </html>
