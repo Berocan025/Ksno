@@ -1,8 +1,6 @@
 /**
- * BonusBoss Casino Yayıncısı Portföy Sitesi
+ * BonusBoss Casino Yayıncısı Portföy Sitesi - Ana JavaScript
  * Yazılımcı: BERAT K
- * 
- * Ana JavaScript dosyası
  */
 
 // DOM yüklendiğinde çalışacak fonksiyonlar
@@ -13,89 +11,103 @@ document.addEventListener('DOMContentLoaded', function() {
     // AOS animasyonlarını başlat
     initAOS();
     
-    // Header scroll efektini başlat
-    initHeaderScroll();
+    // Smooth scroll'u başlat
+    initSmoothScroll();
     
     // Back to top butonunu başlat
     initBackToTop();
     
-    // Smooth scroll'u başlat
-    initSmoothScroll();
+    // Mobile menü toggle'ını başlat
+    initMobileMenu();
+    
+    // Form validasyonlarını başlat
+    initFormValidation();
+    
+    // Gallery lightbox'ını başlat
+    initGalleryLightbox();
     
     // Portfolio filtrelerini başlat
     initPortfolioFilters();
     
-    // Gallery lightbox'ını başlat
-    initLightbox();
+    // Header scroll efektini başlat
+    initHeaderScroll();
     
-    // Form validasyonlarını başlat
-    initFormValidation();
+    // Parallax efektlerini başlat
+    initParallax();
     
     // Counter animasyonlarını başlat
     initCounters();
     
     // Testimonial slider'ını başlat
     initTestimonialSlider();
-    
-    // Parallax efektlerini başlat
-    initParallax();
-    
-    // Typing animasyonunu başlat
-    initTypingAnimation();
 });
 
-// Loading spinner'ı gizle
+/**
+ * Loading Spinner
+ */
 function hideLoadingSpinner() {
     const spinner = document.getElementById('loading-spinner');
     if (spinner) {
         setTimeout(() => {
-            spinner.classList.add('hidden');
+            spinner.style.opacity = '0';
             setTimeout(() => {
                 spinner.style.display = 'none';
             }, 300);
-        }, 1000);
+        }, 500);
     }
 }
 
-// AOS animasyonlarını başlat
+/**
+ * AOS Animasyonları
+ */
 function initAOS() {
     if (typeof AOS !== 'undefined') {
         AOS.init({
-            duration: 800,
+            duration: 1000,
             easing: 'ease-in-out',
             once: true,
-            offset: 100
+            offset: 100,
+            delay: 0
         });
     }
 }
 
-// Header scroll efekti
-function initHeaderScroll() {
-    const header = document.querySelector('.header');
-    if (header) {
-        window.addEventListener('scroll', function() {
-            if (window.scrollY > 100) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
+/**
+ * Smooth Scroll
+ */
+function initSmoothScroll() {
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                const headerHeight = document.querySelector('.header').offsetHeight;
+                const targetPosition = target.offsetTop - headerHeight;
+                
+                window.scrollTo({
+                    top: targetPosition,
+                    behavior: 'smooth'
+                });
             }
         });
-    }
+    });
 }
 
-// Back to top butonu
+/**
+ * Back to Top Button
+ */
 function initBackToTop() {
-    const backToTopBtn = document.getElementById('back-to-top');
-    if (backToTopBtn) {
+    const backToTop = document.getElementById('back-to-top');
+    if (backToTop) {
         window.addEventListener('scroll', function() {
-            if (window.scrollY > 300) {
-                backToTopBtn.classList.add('show');
+            if (window.pageYOffset > 300) {
+                backToTop.classList.add('show');
             } else {
-                backToTopBtn.classList.remove('show');
+                backToTop.classList.remove('show');
             }
         });
         
-        backToTopBtn.addEventListener('click', function() {
+        backToTop.addEventListener('click', function() {
             window.scrollTo({
                 top: 0,
                 behavior: 'smooth'
@@ -104,44 +116,264 @@ function initBackToTop() {
     }
 }
 
-// Smooth scroll
-function initSmoothScroll() {
-    const links = document.querySelectorAll('a[href^="#"]');
-    links.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
+/**
+ * Mobile Menu Toggle
+ */
+function initMobileMenu() {
+    const navbarToggler = document.getElementById('navbar-toggler');
+    const navbarMenu = document.getElementById('navbar-menu');
+    
+    if (navbarToggler && navbarMenu) {
+        navbarToggler.addEventListener('click', function() {
+            navbarMenu.classList.toggle('active');
+            navbarToggler.classList.toggle('active');
+            document.body.classList.toggle('menu-open');
+        });
+        
+        // Menü linklerine tıklandığında menüyü kapat
+        const navLinks = navbarMenu.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                navbarMenu.classList.remove('active');
+                navbarToggler.classList.remove('active');
+                document.body.classList.remove('menu-open');
+            });
+        });
+        
+        // Menü dışına tıklandığında menüyü kapat
+        document.addEventListener('click', function(e) {
+            if (!navbarMenu.contains(e.target) && !navbarToggler.contains(e.target)) {
+                navbarMenu.classList.remove('active');
+                navbarToggler.classList.remove('active');
+                document.body.classList.remove('menu-open');
+            }
+        });
+    }
+}
+
+/**
+ * Form Validation
+ */
+function initFormValidation() {
+    const forms = document.querySelectorAll('form[data-validate]');
+    
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!validateForm(this)) {
+                e.preventDefault();
+            }
+        });
+        
+        // Real-time validation
+        const inputs = form.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                validateField(this);
+            });
+            
+            input.addEventListener('input', function() {
+                clearFieldError(this);
+            });
+        });
+    });
+}
+
+function validateForm(form) {
+    let isValid = true;
+    const inputs = form.querySelectorAll('input[required], textarea[required], select[required]');
+    
+    inputs.forEach(input => {
+        if (!validateField(input)) {
+            isValid = false;
+        }
+    });
+    
+    return isValid;
+}
+
+function validateField(field) {
+    const value = field.value.trim();
+    const type = field.type;
+    const required = field.hasAttribute('required');
+    
+    // Clear previous errors
+    clearFieldError(field);
+    
+    // Required field validation
+    if (required && !value) {
+        showFieldError(field, 'Bu alan zorunludur.');
+        return false;
+    }
+    
+    // Email validation
+    if (type === 'email' && value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+            showFieldError(field, 'Geçerli bir e-posta adresi girin.');
+            return false;
+        }
+    }
+    
+    // Phone validation
+    if (type === 'tel' && value) {
+        const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+        if (!phoneRegex.test(value)) {
+            showFieldError(field, 'Geçerli bir telefon numarası girin.');
+            return false;
+        }
+    }
+    
+    // URL validation
+    if (type === 'url' && value) {
+        try {
+            new URL(value);
+        } catch {
+            showFieldError(field, 'Geçerli bir URL girin.');
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+function showFieldError(field, message) {
+    field.classList.add('error');
+    
+    // Remove existing error message
+    const existingError = field.parentNode.querySelector('.error-message');
+    if (existingError) {
+        existingError.remove();
+    }
+    
+    // Create error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = message;
+    errorDiv.style.color = '#ff6b6b';
+    errorDiv.style.fontSize = '0.875rem';
+    errorDiv.style.marginTop = '5px';
+    
+    field.parentNode.appendChild(errorDiv);
+}
+
+function clearFieldError(field) {
+    field.classList.remove('error');
+    const errorMessage = field.parentNode.querySelector('.error-message');
+    if (errorMessage) {
+        errorMessage.remove();
+    }
+}
+
+/**
+ * Gallery Lightbox
+ */
+function initGalleryLightbox() {
+    const galleryItems = document.querySelectorAll('.gallery-item');
+    
+    galleryItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const media = this.querySelector('img, video');
+            if (media) {
+                openLightbox(media.src, media.tagName.toLowerCase());
             }
         });
     });
 }
 
-// Portfolio filtreleri
+function openLightbox(src, type) {
+    // Create lightbox overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'lightbox-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        cursor: pointer;
+    `;
+    
+    // Create media element
+    const media = document.createElement(type);
+    media.src = src;
+    media.style.cssText = `
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+        border-radius: 10px;
+    `;
+    
+    if (type === 'video') {
+        media.controls = true;
+        media.autoplay = true;
+    }
+    
+    // Create close button
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 2rem;
+        cursor: pointer;
+        z-index: 10001;
+    `;
+    
+    overlay.appendChild(media);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+    
+    // Close lightbox
+    function closeLightbox() {
+        document.body.removeChild(overlay);
+        document.removeEventListener('keydown', handleKeydown);
+    }
+    
+    function handleKeydown(e) {
+        if (e.key === 'Escape') {
+            closeLightbox();
+        }
+    }
+    
+    overlay.addEventListener('click', closeLightbox);
+    closeBtn.addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', handleKeydown);
+}
+
+/**
+ * Portfolio Filters
+ */
 function initPortfolioFilters() {
-    const filterBtns = document.querySelectorAll('.filter-btn');
+    const filterButtons = document.querySelectorAll('.portfolio-filter button');
     const portfolioItems = document.querySelectorAll('.portfolio-item');
     
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
             const filter = this.getAttribute('data-filter');
             
-            // Aktif buton sınıfını güncelle
-            filterBtns.forEach(b => b.classList.remove('active'));
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
             
-            // Portfolio öğelerini filtrele
+            // Filter items
             portfolioItems.forEach(item => {
-                if (filter === 'all' || item.getAttribute('data-category') === filter) {
+                const category = item.getAttribute('data-category');
+                
+                if (filter === 'all' || category === filter) {
                     item.style.display = 'block';
                     setTimeout(() => {
                         item.style.opacity = '1';
                         item.style.transform = 'scale(1)';
-                    }, 100);
+                    }, 10);
                 } else {
                     item.style.opacity = '0';
                     item.style.transform = 'scale(0.8)';
@@ -154,35 +386,57 @@ function initPortfolioFilters() {
     });
 }
 
-// Lightbox başlat
-function initLightbox() {
-    if (typeof lightbox !== 'undefined') {
-        lightbox.option({
-            'resizeDuration': 200,
-            'wrapAround': true,
-            'albumLabel': 'Resim %1 / %2'
-        });
-    }
+/**
+ * Header Scroll Effect
+ */
+function initHeaderScroll() {
+    const header = document.querySelector('.header');
+    let lastScrollTop = 0;
+    
+    window.addEventListener('scroll', function() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        if (scrollTop > 100) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+        
+        // Hide/show header on scroll
+        if (scrollTop > lastScrollTop && scrollTop > 200) {
+            header.style.transform = 'translateY(-100%)';
+        } else {
+            header.style.transform = 'translateY(0)';
+        }
+        
+        lastScrollTop = scrollTop;
+    });
 }
 
-// Form validasyonu
-function initFormValidation() {
-    const forms = document.querySelectorAll('.needs-validation');
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            if (!form.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            form.classList.add('was-validated');
+/**
+ * Parallax Effects
+ */
+function initParallax() {
+    const parallaxElements = document.querySelectorAll('[data-parallax]');
+    
+    window.addEventListener('scroll', function() {
+        const scrolled = window.pageYOffset;
+        
+        parallaxElements.forEach(element => {
+            const speed = element.getAttribute('data-parallax') || 0.5;
+            const yPos = -(scrolled * speed);
+            element.style.transform = `translateY(${yPos}px)`;
         });
     });
 }
 
-// Counter animasyonları
+/**
+ * Counter Animations
+ */
 function initCounters() {
-    const counters = document.querySelectorAll('.stat-number');
-    const options = {
+    const counters = document.querySelectorAll('[data-counter]');
+    
+    const observerOptions = {
         threshold: 0.5,
         rootMargin: '0px 0px -100px 0px'
     };
@@ -191,269 +445,145 @@ function initCounters() {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const counter = entry.target;
-                const target = parseInt(counter.getAttribute('data-target'));
-                const duration = 2000;
-                const increment = target / (duration / 16);
+                const target = parseInt(counter.getAttribute('data-counter'));
+                const duration = 2000; // 2 seconds
+                const step = target / (duration / 16); // 60fps
                 let current = 0;
                 
                 const timer = setInterval(() => {
-                    current += increment;
+                    current += step;
                     if (current >= target) {
                         current = target;
                         clearInterval(timer);
                     }
-                    counter.textContent = Math.floor(current).toLocaleString();
+                    counter.textContent = Math.floor(current);
                 }, 16);
                 
                 observer.unobserve(counter);
             }
         });
-    }, options);
+    }, observerOptions);
     
     counters.forEach(counter => {
         observer.observe(counter);
     });
 }
 
-// Testimonial slider
+/**
+ * Testimonial Slider
+ */
 function initTestimonialSlider() {
-    const testimonials = document.querySelectorAll('.testimonial-card');
-    if (testimonials.length > 1) {
-        let currentIndex = 0;
-        
-        function showTestimonial(index) {
-            testimonials.forEach((testimonial, i) => {
-                testimonial.style.display = i === index ? 'block' : 'none';
-            });
-        }
-        
-        function nextTestimonial() {
-            currentIndex = (currentIndex + 1) % testimonials.length;
-            showTestimonial(currentIndex);
-        }
-        
-        // İlk testimonial'ı göster
-        showTestimonial(0);
-        
-        // Otomatik geçiş
-        setInterval(nextTestimonial, 5000);
+    const slider = document.querySelector('.testimonial-slider');
+    if (!slider) return;
+    
+    const slides = slider.querySelectorAll('.testimonial-item');
+    const prevBtn = slider.querySelector('.slider-prev');
+    const nextBtn = slider.querySelector('.slider-next');
+    let currentSlide = 0;
+    
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.style.display = i === index ? 'block' : 'none';
+        });
     }
+    
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+    }
+    
+    function prevSlide() {
+        currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+        showSlide(currentSlide);
+    }
+    
+    if (prevBtn) prevBtn.addEventListener('click', prevSlide);
+    if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+    
+    // Auto slide
+    setInterval(nextSlide, 5000);
+    
+    // Show first slide
+    showSlide(0);
 }
 
-// Parallax efektleri
-function initParallax() {
-    const parallaxElements = document.querySelectorAll('.parallax');
-    
-    window.addEventListener('scroll', function() {
-        const scrolled = window.pageYOffset;
-        
-        parallaxElements.forEach(element => {
-            const speed = element.getAttribute('data-speed') || 0.5;
-            const yPos = -(scrolled * speed);
-            element.style.transform = `translateY(${yPos}px)`;
+/**
+ * Utility Functions
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+// Throttled scroll handler
+const throttledScroll = throttle(function() {
+    // Scroll-based animations can be added here
+}, 16);
+
+window.addEventListener('scroll', throttledScroll);
+
+// Debounced resize handler
+const debouncedResize = debounce(function() {
+    // Resize-based adjustments can be added here
+}, 250);
+
+window.addEventListener('resize', debouncedResize);
+
+/**
+ * Performance Optimizations
+ */
+// Lazy loading for images
+if ('IntersectionObserver' in window) {
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.remove('lazy');
+                imageObserver.unobserve(img);
+            }
         });
+    });
+    
+    document.querySelectorAll('img[data-src]').forEach(img => {
+        imageObserver.observe(img);
     });
 }
 
-// Typing animasyonu
-function initTypingAnimation() {
-    const typingElement = document.querySelector('.typing-animation');
-    if (typingElement) {
-        const text = typingElement.getAttribute('data-text');
-        let index = 0;
-        
-        function typeText() {
-            if (index < text.length) {
-                typingElement.textContent += text.charAt(index);
-                index++;
-                setTimeout(typeText, 100);
-            }
-        }
-        
-        // Intersection Observer ile görünür olduğunda başlat
-        const observer = new IntersectionObserver(function(entries) {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    typeText();
-                    observer.unobserve(entry.target);
-                }
-            });
-        });
-        
-        observer.observe(typingElement);
-    }
+// Preload critical resources
+function preloadResources() {
+    const criticalImages = [
+        // Add critical image paths here
+    ];
+    
+    criticalImages.forEach(src => {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = src;
+        document.head.appendChild(link);
+    });
 }
 
-// Utility fonksiyonlar
-const Utils = {
-    // Debounce fonksiyonu
-    debounce: function(func, wait, immediate) {
-        let timeout;
-        return function executedFunction() {
-            const context = this;
-            const args = arguments;
-            const later = function() {
-                timeout = null;
-                if (!immediate) func.apply(context, args);
-            };
-            const callNow = immediate && !timeout;
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-            if (callNow) func.apply(context, args);
-        };
-    },
-    
-    // Throttle fonksiyonu
-    throttle: function(func, limit) {
-        let inThrottle;
-        return function() {
-            const args = arguments;
-            const context = this;
-            if (!inThrottle) {
-                func.apply(context, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
-            }
-        };
-    },
-    
-    // Element görünürlük kontrolü
-    isElementInViewport: function(el) {
-        const rect = el.getBoundingClientRect();
-        return (
-            rect.top >= 0 &&
-            rect.left >= 0 &&
-            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-        );
-    },
-    
-    // Smooth scroll to element
-    scrollToElement: function(element, offset = 0) {
-        const elementPosition = element.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - offset;
-        
-        window.scrollTo({
-            top: offsetPosition,
-            behavior: 'smooth'
-        });
-    },
-    
-    // Format number
-    formatNumber: function(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    },
-    
-    // Generate random number
-    randomNumber: function(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    },
-    
-    // Check if mobile device
-    isMobile: function() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    },
-    
-    // Add class with delay
-    addClassWithDelay: function(element, className, delay) {
-        setTimeout(() => {
-            element.classList.add(className);
-        }, delay);
-    },
-    
-    // Remove class with delay
-    removeClassWithDelay: function(element, className, delay) {
-        setTimeout(() => {
-            element.classList.remove(className);
-        }, delay);
-    }
-};
-
-// Event listeners
-window.addEventListener('resize', Utils.debounce(function() {
-    // Responsive işlemler
-    if (typeof AOS !== 'undefined') {
-        AOS.refresh();
-    }
-}, 250));
-
-window.addEventListener('scroll', Utils.throttle(function() {
-    // Scroll işlemleri
-}, 16));
-
-// Global fonksiyonlar
-window.BonusBoss = {
-    Utils: Utils,
-    
-    // Alert göster
-    showAlert: function(message, type = 'info') {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        `;
-        
-        document.body.insertBefore(alertDiv, document.body.firstChild);
-        
-        // 5 saniye sonra otomatik kapat
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
-    },
-    
-    // Loading göster
-    showLoading: function() {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'loading-overlay';
-        loadingDiv.innerHTML = `
-            <div class="spinner-border text-warning" role="status">
-                <span class="visually-hidden">Yükleniyor...</span>
-            </div>
-        `;
-        document.body.appendChild(loadingDiv);
-    },
-    
-    // Loading gizle
-    hideLoading: function() {
-        const loadingDiv = document.querySelector('.loading-overlay');
-        if (loadingDiv) {
-            loadingDiv.remove();
-        }
-    },
-    
-    // Modal göster
-    showModal: function(title, content) {
-        const modalHtml = `
-            <div class="modal fade" id="bonusBossModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">${title}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            ${content}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        const modal = new bootstrap.Modal(document.getElementById('bonusBossModal'));
-        modal.show();
-        
-        // Modal kapandığında DOM'dan kaldır
-        document.getElementById('bonusBossModal').addEventListener('hidden.bs.modal', function() {
-            this.remove();
-        });
-    }
-};
-
-// Console log
-console.log('🎰 BonusBoss Casino Yayıncısı Portföy Sitesi yüklendi!');
-console.log('👨‍💻 Yazılımcı: BERAT K');
-console.log('🚀 Site başarıyla çalışıyor...');
+// Initialize preloading
+preloadResources();

@@ -1,194 +1,220 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer bg-dark text-light">
-        <div class="container">
-            <div class="row">
-                <!-- Logo ve Açıklama -->
-                <div class="col-lg-4 col-md-6 mb-4">
-                    <div class="footer-logo mb-3">
-                        <div class="logo">
-                            <span class="logo-text">
-                                <span class="logo-bonus">Bonus</span>
-                                <span class="logo-boss">Boss</span>
-                            </span>
-                            <i class="fas fa-crown logo-icon"></i>
-                        </div>
-                    </div>
-                    <p class="text-muted">
-                        <?php echo get_setting('site_description', 'Kazançlı ortaklıklar için doğru adres'); ?>
-                    </p>
-                    <div class="social-links">
-                        <a href="<?php echo get_setting('social_facebook', '#'); ?>" class="social-link" target="_blank">
-                            <i class="fab fa-facebook-f"></i>
-                        </a>
-                        <a href="<?php echo get_setting('social_instagram', '#'); ?>" class="social-link" target="_blank">
-                            <i class="fab fa-instagram"></i>
-                        </a>
-                        <a href="<?php echo get_setting('social_twitter', '#'); ?>" class="social-link" target="_blank">
-                            <i class="fab fa-twitter"></i>
-                        </a>
-                        <a href="<?php echo get_setting('social_youtube', '#'); ?>" class="social-link" target="_blank">
-                            <i class="fab fa-youtube"></i>
-                        </a>
-                        <a href="<?php echo get_setting('telegram_channel', '#'); ?>" class="social-link" target="_blank">
-                            <i class="fab fa-telegram-plane"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Hızlı Linkler -->
-                <div class="col-lg-2 col-md-6 mb-4">
-                    <h5 class="text-warning mb-3">Hızlı Linkler</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="<?php echo SITE_URL; ?>" class="footer-link">Ana Sayfa</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/about.php" class="footer-link">Hakkımda</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/services.php" class="footer-link">Hizmetler</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/portfolio.php" class="footer-link">Portföy</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/gallery.php" class="footer-link">Galeri</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/contact.php" class="footer-link">İletişim</a></li>
-                    </ul>
-                </div>
-
-                <!-- Hizmetler -->
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <h5 class="text-warning mb-3">Hizmetlerimiz</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="<?php echo SITE_URL; ?>/services.php#live-streaming" class="footer-link">Canlı Yayın</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/services.php#social-media" class="footer-link">Sosyal Medya</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/services.php#influencer" class="footer-link">Influencer</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/services.php#ads" class="footer-link">Meta Reklamları</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/services.php#sms" class="footer-link">SMS/Mail</a></li>
-                        <li><a href="<?php echo SITE_URL; ?>/services.php#telegram" class="footer-link">Telegram</a></li>
-                    </ul>
-                </div>
-
-                <!-- İletişim Bilgileri -->
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <h5 class="text-warning mb-3">İletişim</h5>
-                    <div class="contact-info">
-                        <div class="contact-item mb-2">
-                            <i class="fas fa-envelope text-warning me-2"></i>
-                            <a href="mailto:<?php echo get_setting('contact_email', 'info@bonusboss.com'); ?>" class="footer-link">
-                                <?php echo get_setting('contact_email', 'info@bonusboss.com'); ?>
-                            </a>
-                        </div>
-                        <div class="contact-item mb-2">
-                            <i class="fas fa-phone text-warning me-2"></i>
-                            <a href="tel:<?php echo get_setting('contact_phone', '+90 555 123 4567'); ?>" class="footer-link">
-                                <?php echo get_setting('contact_phone', '+90 555 123 4567'); ?>
-                            </a>
-                        </div>
-                        <div class="contact-item mb-2">
-                            <i class="fas fa-map-marker-alt text-warning me-2"></i>
-                            <span class="text-muted"><?php echo get_setting('contact_address', 'İstanbul, Türkiye'); ?></span>
-                        </div>
-                        <div class="contact-item mb-2">
-                            <i class="fas fa-clock text-warning me-2"></i>
-                            <span class="text-muted"><?php echo get_setting('working_hours', '7/24 Hizmet'); ?></span>
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-4 col-md-6">
+                        <div class="footer-widget">
+                            <div class="footer-logo">
+                                <?php $logo = getSetting('site_logo'); ?>
+                                <?php if ($logo): ?>
+                                    <img src="<?= UPLOAD_PATH . $logo ?>" alt="<?= SITE_NAME ?>" class="logo-img">
+                                <?php else: ?>
+                                    <span class="logo-text"><?= SITE_NAME ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <p class="footer-description">
+                                <?= getSetting('site_description', 'Kazançlı ortaklıklar için doğru adres') ?>
+                            </p>
+                            <div class="social-links">
+                                <?php $facebook = getSetting('social_facebook'); ?>
+                                <?php if ($facebook): ?>
+                                    <a href="<?= $facebook ?>" target="_blank" class="social-link">
+                                        <i class="fab fa-facebook-f"></i>
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <?php $instagram = getSetting('social_instagram'); ?>
+                                <?php if ($instagram): ?>
+                                    <a href="<?= $instagram ?>" target="_blank" class="social-link">
+                                        <i class="fab fa-instagram"></i>
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <?php $twitter = getSetting('social_twitter'); ?>
+                                <?php if ($twitter): ?>
+                                    <a href="<?= $twitter ?>" target="_blank" class="social-link">
+                                        <i class="fab fa-twitter"></i>
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <?php $youtube = getSetting('social_youtube'); ?>
+                                <?php if ($youtube): ?>
+                                    <a href="<?= $youtube ?>" target="_blank" class="social-link">
+                                        <i class="fab fa-youtube"></i>
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <?php $telegram = getSetting('telegram_channel'); ?>
+                                <?php if ($telegram): ?>
+                                    <a href="<?= $telegram ?>" target="_blank" class="social-link">
+                                        <i class="fab fa-telegram-plane"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Telegram Butonları -->
-                    <div class="telegram-buttons mt-3">
-                        <a href="<?php echo get_setting('telegram_channel', '#'); ?>" class="btn btn-outline-warning btn-sm me-2" target="_blank">
-                            <i class="fab fa-telegram-plane"></i> Kanal
-                        </a>
-                        <a href="<?php echo get_setting('telegram_group', '#'); ?>" class="btn btn-outline-warning btn-sm" target="_blank">
-                            <i class="fab fa-telegram-plane"></i> Grup
-                        </a>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="footer-widget">
+                            <h4 class="footer-title">Hızlı Linkler</h4>
+                            <ul class="footer-links">
+                                <li><a href="index.php">Ana Sayfa</a></li>
+                                <li><a href="about.php">Hakkımda</a></li>
+                                <li><a href="services.php">Hizmetler</a></li>
+                                <li><a href="portfolio.php">Portföy</a></li>
+                                <li><a href="gallery.php">Galeri</a></li>
+                                <li><a href="contact.php">İletişim</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6">
+                        <div class="footer-widget">
+                            <h4 class="footer-title">Hizmetlerimiz</h4>
+                            <ul class="footer-links">
+                                <li><a href="services.php#live-streaming">Canlı Yayın</a></li>
+                                <li><a href="services.php#social-media">Sosyal Medya</a></li>
+                                <li><a href="services.php#influencer">Influencer</a></li>
+                                <li><a href="services.php#ads">Meta Reklamları</a></li>
+                                <li><a href="services.php#sms">SMS/Mail</a></li>
+                                <li><a href="services.php#telegram">Telegram</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6">
+                        <div class="footer-widget">
+                            <h4 class="footer-title">İletişim Bilgileri</h4>
+                            <div class="contact-info">
+                                <?php $phone = getSetting('contact_phone'); ?>
+                                <?php if ($phone): ?>
+                                    <div class="contact-item">
+                                        <i class="fas fa-phone"></i>
+                                        <span><?= $phone ?></span>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <?php $email = getSetting('contact_email'); ?>
+                                <?php if ($email): ?>
+                                    <div class="contact-item">
+                                        <i class="fas fa-envelope"></i>
+                                        <span><?= $email ?></span>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <?php $address = getSetting('contact_address'); ?>
+                                <?php if ($address): ?>
+                                    <div class="contact-item">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span><?= $address ?></span>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <?php $hours = getSetting('working_hours'); ?>
+                                <?php if ($hours): ?>
+                                    <div class="contact-item">
+                                        <i class="fas fa-clock"></i>
+                                        <span><?= $hours ?></span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Alt Çizgi -->
-            <hr class="border-secondary my-4">
-
-            <!-- Alt Footer -->
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <p class="mb-0 text-muted">
-                        <?php echo get_setting('footer_text', '© 2024 BonusBoss. Tüm hakları saklıdır.'); ?>
-                    </p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="mb-0 text-muted">
-                        <small>Yazılımcı: <a href="#" class="text-warning">BERAT K</a></small>
-                    </p>
+        </div>
+        
+        <div class="footer-bottom">
+            <div class="container">
+                <div class="footer-bottom-content">
+                    <div class="copyright">
+                        <p><?= getSetting('footer_text', '© 2024 BonusBoss. Tüm hakları saklıdır.') ?></p>
+                    </div>
+                    <div class="footer-bottom-links">
+                        <a href="privacy.php">Gizlilik Politikası</a>
+                        <a href="terms.php">Kullanım Şartları</a>
+                    </div>
                 </div>
             </div>
         </div>
     </footer>
 
     <!-- Back to Top Button -->
-    <button id="back-to-top" class="back-to-top" title="Yukarı Çık">
+    <button id="back-to-top" class="back-to-top">
         <i class="fas fa-chevron-up"></i>
     </button>
 
-    <!-- WhatsApp Float Button -->
-    <a href="https://wa.me/905551234567" class="whatsapp-float" target="_blank" title="WhatsApp">
-        <i class="fab fa-whatsapp"></i>
-    </a>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    
-    <!-- AOS Animation -->
+    <!-- JavaScript Dosyaları -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="assets/js/main.js"></script>
     
-    <!-- Lightbox JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/js/lightbox.min.js"></script>
-    
-    <!-- Custom JS -->
-    <script src="<?php echo SITE_URL; ?>/assets/js/main.js"></script>
-
-    <!-- Page Specific Scripts -->
-    <?php if (isset($page_scripts)): ?>
-        <?php foreach ($page_scripts as $script): ?>
-            <script src="<?php echo $script; ?>"></script>
-        <?php endforeach; ?>
-    <?php endif; ?>
-
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <!-- Custom Scripts -->
     <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'GA_MEASUREMENT_ID');
+        // AOS Animation başlat
+        AOS.init({
+            duration: 1000,
+            easing: 'ease-in-out',
+            once: true
+        });
+        
+        // Loading spinner gizle
+        window.addEventListener('load', function() {
+            const spinner = document.getElementById('loading-spinner');
+            if (spinner) {
+                spinner.style.opacity = '0';
+                setTimeout(() => {
+                    spinner.style.display = 'none';
+                }, 300);
+            }
+        });
+        
+        // Back to top button
+        const backToTop = document.getElementById('back-to-top');
+        if (backToTop) {
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    backToTop.classList.add('show');
+                } else {
+                    backToTop.classList.remove('show');
+                }
+            });
+            
+            backToTop.addEventListener('click', function() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
+        
+        // Mobile menu toggle
+        const navbarToggler = document.getElementById('navbar-toggler');
+        const navbarMenu = document.getElementById('navbar-menu');
+        
+        if (navbarToggler && navbarMenu) {
+            navbarToggler.addEventListener('click', function() {
+                navbarMenu.classList.toggle('active');
+                navbarToggler.classList.toggle('active');
+            });
+        }
+        
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
     </script>
-
-    <!-- Schema.org Structured Data -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "BonusBoss",
-        "description": "<?php echo get_setting('site_description', 'Kazançlı ortaklıklar için doğru adres'); ?>",
-        "url": "<?php echo SITE_URL; ?>",
-        "logo": "<?php echo SITE_URL; ?>/assets/images/logo.png",
-        "contactPoint": {
-            "@type": "ContactPoint",
-            "telephone": "<?php echo get_setting('contact_phone', '+90 555 123 4567'); ?>",
-            "contactType": "customer service",
-            "email": "<?php echo get_setting('contact_email', 'info@bonusboss.com'); ?>"
-        },
-        "address": {
-            "@type": "PostalAddress",
-            "addressLocality": "İstanbul",
-            "addressCountry": "TR"
-        },
-        "sameAs": [
-            "<?php echo get_setting('social_facebook', '#'); ?>",
-            "<?php echo get_setting('social_instagram', '#'); ?>",
-            "<?php echo get_setting('social_twitter', '#'); ?>",
-            "<?php echo get_setting('social_youtube', '#'); ?>"
-        ]
-    }
-    </script>
-
 </body>
 </html>

@@ -1,134 +1,150 @@
 <?php
-/**
- * BonusBoss Casino Yayıncısı Portföy Sitesi
- * Yazılımcı: BERAT K
- * 
- * Header dosyası
- */
-
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/../config.php';
 
 // Sayfa başlığı ve meta bilgileri
-$page_title = isset($page_title) ? $page_title : '';
-$page_description = isset($page_description) ? $page_description : '';
-$page_keywords = isset($page_keywords) ? $page_keywords : '';
-$page_image = isset($page_image) ? $page_image : '';
-
-// Meta tag'leri oluştur
-$meta_tags = generate_meta_tags($page_title, $page_description, $page_keywords, $page_image);
+$pageTitle = $pageTitle ?? getSetting('site_title', 'BonusBoss');
+$pageDescription = $pageDescription ?? getSetting('site_description', 'Kazançlı ortaklıklar için doğru adres');
+$pageKeywords = $pageKeywords ?? getSetting('site_keywords', 'casino, yayıncı, bonus, boss, profesyonel');
 ?>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <?php echo $meta_tags; ?>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($pageTitle) ?></title>
+    <meta name="description" content="<?= htmlspecialchars($pageDescription) ?>">
+    <meta name="keywords" content="<?= htmlspecialchars($pageKeywords) ?>">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="<?php echo SITE_URL; ?>/assets/images/favicon.ico">
+    <?php $favicon = getSetting('site_favicon'); ?>
+    <?php if ($favicon): ?>
+        <link rel="icon" type="image/x-icon" href="<?= UPLOAD_PATH . $favicon ?>">
+    <?php endif; ?>
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="<?= htmlspecialchars($pageTitle) ?>">
+    <meta property="og:description" content="<?= htmlspecialchars($pageDescription) ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?= generateCanonicalURL($_SERVER['REQUEST_URI'] ?? '') ?>">
+    <?php $logo = getSetting('site_logo'); ?>
+    <?php if ($logo): ?>
+        <meta property="og:image" content="<?= SITE_URL . '/' . UPLOAD_PATH . $logo ?>">
+    <?php endif; ?>
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?= htmlspecialchars($pageTitle) ?>">
+    <meta name="twitter:description" content="<?= htmlspecialchars($pageDescription) ?>">
+    <?php if ($logo): ?>
+        <meta name="twitter:image" content="<?= SITE_URL . '/' . UPLOAD_PATH . $logo ?>">
+    <?php endif; ?>
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="<?= generateCanonicalURL($_SERVER['REQUEST_URI'] ?? '') ?>">
+    
+    <!-- CSS Dosyaları -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
-    <!-- Lightbox CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/css/lightbox.min.css">
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
-    
     <!-- Custom CSS Variables -->
     <style>
         :root {
-            --primary-color: <?php echo get_setting('primary_color', '#FFD700'); ?>;
-            --secondary-color: <?php echo get_setting('secondary_color', '#0099FF'); ?>;
-            --dark-color: <?php echo get_setting('dark_color', '#003366'); ?>;
-            --light-color: #f8f9fa;
-            --text-color: #333;
-            --text-muted: #6c757d;
-            --border-color: #dee2e6;
-            --shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
-            --gradient-primary: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            --primary-color: <?= getSetting('primary_color', '#FFD700') ?>;
+            --secondary-color: <?= getSetting('secondary_color', '#0099FF') ?>;
+            --dark-color: <?= getSetting('dark_color', '#003366') ?>;
+            --text-color: #ffffff;
+            --text-muted: #b0b0b0;
+            --bg-dark: #0a0a0a;
+            --bg-darker: #050505;
+            --border-color: #333;
+            --gradient-primary: linear-gradient(135deg, var(--primary-color), #FFA500);
+            --gradient-secondary: linear-gradient(135deg, var(--secondary-color), #0066CC);
             --gradient-dark: linear-gradient(135deg, var(--dark-color), #001a33);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.4);
         }
     </style>
 </head>
 <body>
     <!-- Loading Spinner -->
-    <div id="loading-spinner" class="loading-spinner">
-        <div class="spinner-border text-warning" role="status">
-            <span class="visually-hidden">Yükleniyor...</span>
+    <div id="loading-spinner">
+        <div class="spinner">
+            <div class="spinner-inner"></div>
         </div>
     </div>
 
     <!-- Header -->
-    <header class="header fixed-top">
-        <nav class="navbar navbar-expand-lg navbar-dark">
+    <header class="header">
+        <nav class="navbar">
             <div class="container">
-                <!-- Logo -->
-                <a class="navbar-brand" href="<?php echo SITE_URL; ?>">
-                    <div class="logo">
-                        <span class="logo-text">
-                            <span class="logo-bonus">Bonus</span>
-                            <span class="logo-boss">Boss</span>
-                        </span>
-                        <i class="fas fa-crown logo-icon"></i>
-                    </div>
-                </a>
-
-                <!-- Mobile Toggle -->
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <!-- Navigation Menu -->
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo is_active_menu('index'); ?>" href="<?php echo SITE_URL; ?>">
-                                <i class="fas fa-home"></i> <?php echo get_site_text('nav_home', 'Ana Sayfa'); ?>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo is_active_menu('about'); ?>" href="<?php echo SITE_URL; ?>/about.php">
-                                <i class="fas fa-user"></i> <?php echo get_site_text('nav_about', 'Hakkımda'); ?>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo is_active_menu('services'); ?>" href="<?php echo SITE_URL; ?>/services.php">
-                                <i class="fas fa-cogs"></i> <?php echo get_site_text('nav_services', 'Hizmetler'); ?>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo is_active_menu('portfolio'); ?>" href="<?php echo SITE_URL; ?>/portfolio.php">
-                                <i class="fas fa-briefcase"></i> <?php echo get_site_text('nav_portfolio', 'Portföy'); ?>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo is_active_menu('gallery'); ?>" href="<?php echo SITE_URL; ?>/gallery.php">
-                                <i class="fas fa-images"></i> <?php echo get_site_text('nav_gallery', 'Galeri'); ?>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo is_active_menu('contact'); ?>" href="<?php echo SITE_URL; ?>/contact.php">
-                                <i class="fas fa-envelope"></i> <?php echo get_site_text('nav_contact', 'İletişim'); ?>
-                            </a>
-                        </li>
-                        <?php if (is_admin()): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/">
-                                <i class="fas fa-cog"></i> <?php echo get_site_text('nav_admin', 'Admin Panel'); ?>
-                            </a>
-                        </li>
+                <div class="navbar-brand">
+                    <a href="index.php" class="logo">
+                        <?php $logo = getSetting('site_logo'); ?>
+                        <?php if ($logo): ?>
+                            <img src="<?= UPLOAD_PATH . $logo ?>" alt="<?= SITE_NAME ?>" class="logo-img">
+                        <?php else: ?>
+                            <span class="logo-text"><?= SITE_NAME ?></span>
                         <?php endif; ?>
+                    </a>
+                </div>
+                
+                <div class="navbar-menu" id="navbar-menu">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a href="index.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
+                                <?= getSiteText('nav_home', 'Ana Sayfa') ?>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="about.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'about.php' ? 'active' : '' ?>">
+                                <?= getSiteText('nav_about', 'Hakkımda') ?>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="services.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'services.php' ? 'active' : '' ?>">
+                                <?= getSiteText('nav_services', 'Hizmetler') ?>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="portfolio.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'portfolio.php' ? 'active' : '' ?>">
+                                <?= getSiteText('nav_portfolio', 'Portföy') ?>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="gallery.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'gallery.php' ? 'active' : '' ?>">
+                                <?= getSiteText('nav_gallery', 'Galeri') ?>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="contact.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : '' ?>">
+                                <?= getSiteText('nav_contact', 'İletişim') ?>
+                            </a>
+                        </li>
                     </ul>
+                </div>
+                
+                <div class="navbar-actions">
+                    <a href="contact.php" class="btn btn-primary">
+                        <i class="fas fa-phone"></i>
+                        <?= getSiteText('btn_contact', 'İletişime Geç') ?>
+                    </a>
+                    
+                    <button class="navbar-toggler" id="navbar-toggler">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
                 </div>
             </div>
         </nav>
