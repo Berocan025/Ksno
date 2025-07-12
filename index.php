@@ -15,16 +15,21 @@ $page_keywords = 'casino, yayıncı, bonus, boss, profesyonel, canlı yayın, so
 include 'includes/header.php';
 
 // Hizmetleri getir
-$services_query = "SELECT * FROM services WHERE is_active = 1 ORDER BY sort_order ASC LIMIT 6";
-$services_result = $conn->query($services_query);
+$services_result = null;
+$portfolio_result = null;
 
-// Son portföy projelerini getir
-$portfolio_query = "SELECT p.*, c.name as category_name FROM portfolio p 
-                   LEFT JOIN categories c ON p.category_id = c.id 
-                   WHERE p.is_active = 1 
-                   ORDER BY p.is_featured DESC, p.created_at DESC 
-                   LIMIT 6";
-$portfolio_result = $conn->query($portfolio_query);
+if ($conn) {
+    $services_query = "SELECT * FROM services WHERE is_active = 1 ORDER BY sort_order ASC LIMIT 6";
+    $services_result = $conn->query($services_query);
+    
+    // Son portföy projelerini getir
+    $portfolio_query = "SELECT p.*, c.name as category_name FROM portfolio p 
+                       LEFT JOIN categories c ON p.category_id = c.id 
+                       WHERE p.is_active = 1 
+                       ORDER BY p.is_featured DESC, p.created_at DESC 
+                       LIMIT 6";
+    $portfolio_result = $conn->query($portfolio_query);
+}
 ?>
 
 <!-- Hero Section -->

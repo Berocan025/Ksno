@@ -3,7 +3,7 @@
  * BonusBoss Casino Yayıncısı Portföy Sitesi
  * Yazılımcı: BERAT K
  * 
- * Admin Panel - Mesaj Yönetimi
+ * Admin Panel - Hizmet Yönetimi
  */
 
 require_once '../../includes/config.php';
@@ -20,57 +20,66 @@ if (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT) {
 }
 $_SESSION['last_activity'] = time();
 
-// Mesaj işlemleri
-if (isset($_POST['action'])) {
-    $action = clean_input($_POST['action']);
-    $message_id = (int)$_POST['message_id'];
+// Hizmet silme
+if (isset($_POST['action']) && $_POST['action'] === 'delete') {
+    $service_id = (int)$_POST['service_id'];
     
-    if ($action === 'mark_read') {
-        $stmt = $pdo->prepare("UPDATE contact_messages SET is_read = 1 WHERE id = ?");
-        if ($stmt->execute([$message_id])) {
-            show_message('Mesaj okundu olarak işaretlendi.', 'success');
-        }
-    } elseif ($action === 'delete') {
-        $stmt = $pdo->prepare("DELETE FROM contact_messages WHERE id = ?");
-        if ($stmt->execute([$message_id])) {
-            show_message('Mesaj başarıyla silindi.', 'success');
-        }
+    $stmt = $pdo->prepare("DELETE FROM services WHERE id = ?");
+    if ($stmt->execute([$service_id])) {
+        show_message('Hizmet başarıyla silindi.', 'success');
+    } else {
+        show_message('Hizmet silinirken bir hata oluştu.', 'error');
+    }
+    
+    redirect('index.php');
+}
+
+// Durum değiştirme
+if (isset($_POST['action']) && $_POST['action'] === 'toggle_status') {
+    $service_id = (int)$_POST['service_id'];
+    
+    $stmt = $pdo->prepare("UPDATE services SET is_active = NOT is_active WHERE id = ?");
+    if ($stmt->execute([$service_id])) {
+        show_message('Hizmet durumu güncellendi.', 'success');
+    } else {
+        show_message('Durum güncellenirken bir hata oluştu.', 'error');
     }
     
     redirect('index.php');
 }
 
 // Filtreleme
-$filter = isset($_GET['filter']) ? clean_input($_GET['filter']) : 'all';
+$status_filter = isset($_GET['status']) ? clean_input($_GET['status']) : '';
 
 // Sayfalama
 $page = isset($_GET['p']) ? (int)$_GET['p'] : 1;
-$per_page = 20;
+$per_page = 10;
 $offset = ($page - 1) * $per_page;
 
-// Mesajları getir
-$where_clause = '';
+// Hizmetleri getir
+$where_conditions = [];
 $params = [];
 
-if ($filter === 'unread') {
-    $where_clause = 'WHERE is_read = 0';
-} elseif ($filter === 'read') {
-    $where_clause = 'WHERE is_read = 1';
+if ($status_filter === 'active') {
+    $where_conditions[] = "is_active = 1";
+} elseif ($status_filter === 'inactive') {
+    $where_conditions[] = "is_active = 0";
 }
 
+$where_clause = $where_conditions ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+
+$services_sql = "SELECT * FROM services $where_clause ORDER BY sort_order ASC, created_at DESC LIMIT $per_page OFFSET $offset";
+$stmt = $pdo->prepare($services_sql);
+$stmt->execute($params);
+$services = $stmt->fetchAll();
+
 // Toplam kayıt sayısı
-$count_sql = "SELECT COUNT(*) as total FROM contact_messages $where_clause";
+$count_sql = "SELECT COUNT(*) as total FROM services $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
 $total_records = $stmt->fetch()['total'];
 
 $total_pages = ceil($total_records / $per_page);
-
-// Mesajları getir
-$sql = "SELECT * FROM contact_messages $where_clause ORDER BY created_at DESC LIMIT $per_page OFFSET $offset";
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$messages = $stmt->fetchAll();
 
 // Mesaj göster
 $message = get_message();
@@ -80,7 +89,7 @@ $message = get_message();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mesaj Yönetimi - BonusBoss Admin</title>
+    <title>Hizmet Yönetimi - BonusBoss Admin</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -194,7 +203,7 @@ $message = get_message();
             color: white;
         }
         
-        .message-card {
+        .service-card {
             background: white;
             border-radius: 10px;
             padding: 1.5rem;
@@ -203,46 +212,48 @@ $message = get_message();
             transition: all 0.3s ease;
         }
         
-        .message-card:hover {
+        .service-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
         }
         
-        .message-card.unread {
-            border-left: 4px solid var(--primary-color);
-            background: #f8f9fa;
-        }
-        
-        .message-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
+        .service-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
             margin-bottom: 1rem;
         }
         
-        .message-info {
-            flex: 1;
-        }
-        
-        .message-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .message-subject {
+        .service-title {
             font-weight: 600;
             color: var(--dark-color);
             margin-bottom: 0.5rem;
         }
         
-        .message-meta {
-            font-size: 0.9rem;
+        .service-description {
             color: #6c757d;
+            margin-bottom: 1rem;
         }
         
-        .message-content {
-            color: #333;
-            line-height: 1.6;
+        .service-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
         }
         
         .filter-buttons {
@@ -256,6 +267,7 @@ $message = get_message();
             padding: 0.5rem 1rem;
             border-radius: 25px;
             margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
             transition: all 0.3s ease;
         }
         
@@ -332,10 +344,10 @@ $message = get_message();
                         <a class="nav-link" href="../gallery/">
                             <i class="fas fa-images"></i>Galeri Yönetimi
                         </a>
-                        <a class="nav-link" href="../services/">
+                        <a class="nav-link active" href="index.php">
                             <i class="fas fa-cogs"></i>Hizmet Yönetimi
                         </a>
-                        <a class="nav-link active" href="index.php">
+                        <a class="nav-link" href="../messages/">
                             <i class="fas fa-envelope"></i>Mesaj Yönetimi
                         </a>
                         <a class="nav-link" href="../settings/">
@@ -349,10 +361,15 @@ $message = get_message();
             <div class="col-md-9 col-lg-10">
                 <div class="main-content">
                     <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h1 class="h3 mb-0">Mesaj Yönetimi</h1>
-                        <a href="../index.php" class="btn btn-admin">
-                            <i class="fas fa-arrow-left me-2"></i>Geri Dön
-                        </a>
+                        <h1 class="h3 mb-0">Hizmet Yönetimi</h1>
+                        <div>
+                            <a href="add.php" class="btn btn-admin me-2">
+                                <i class="fas fa-plus me-2"></i>Yeni Hizmet Ekle
+                            </a>
+                            <a href="../index.php" class="btn btn-admin">
+                                <i class="fas fa-arrow-left me-2"></i>Geri Dön
+                            </a>
+                        </div>
                     </div>
 
                     <?php if ($message): ?>
@@ -367,146 +384,100 @@ $message = get_message();
                         <div class="col-md-4">
                             <div class="stats-card">
                                 <div class="stats-number"><?php echo $total_records; ?></div>
-                                <div class="stats-label">Toplam Mesaj</div>
+                                <div class="stats-label">Toplam Hizmet</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stats-card">
                                 <div class="stats-number">
                                     <?php 
-                                    $stmt = $pdo->query("SELECT COUNT(*) as unread FROM contact_messages WHERE is_read = 0");
-                                    echo $stmt->fetch()['unread'];
+                                    $stmt = $pdo->query("SELECT COUNT(*) as active FROM services WHERE is_active = 1");
+                                    echo $stmt->fetch()['active'];
                                     ?>
                                 </div>
-                                <div class="stats-label">Okunmamış Mesaj</div>
+                                <div class="stats-label">Aktif Hizmet</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stats-card">
                                 <div class="stats-number">
                                     <?php 
-                                    $stmt = $pdo->query("SELECT COUNT(*) as read_count FROM contact_messages WHERE is_read = 1");
-                                    echo $stmt->fetch()['read_count'];
+                                    $stmt = $pdo->query("SELECT COUNT(*) as inactive FROM services WHERE is_active = 0");
+                                    echo $stmt->fetch()['inactive'];
                                     ?>
                                 </div>
-                                <div class="stats-label">Okunmuş Mesaj</div>
+                                <div class="stats-label">Pasif Hizmet</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Filtreler -->
                     <div class="filter-buttons">
-                        <a href="?filter=all" class="btn filter-btn <?php echo $filter === 'all' ? 'active' : ''; ?>">
+                        <a href="?status=" class="btn filter-btn <?php echo $status_filter === '' ? 'active' : ''; ?>">
                             <i class="fas fa-list me-2"></i>Tümü
                         </a>
-                        <a href="?filter=unread" class="btn filter-btn <?php echo $filter === 'unread' ? 'active' : ''; ?>">
-                            <i class="fas fa-envelope me-2"></i>Okunmamış
+                        <a href="?status=active" class="btn filter-btn <?php echo $status_filter === 'active' ? 'active' : ''; ?>">
+                            <i class="fas fa-check me-2"></i>Aktif
                         </a>
-                        <a href="?filter=read" class="btn filter-btn <?php echo $filter === 'read' ? 'active' : ''; ?>">
-                            <i class="fas fa-envelope-open me-2"></i>Okunmuş
+                        <a href="?status=inactive" class="btn filter-btn <?php echo $status_filter === 'inactive' ? 'active' : ''; ?>">
+                            <i class="fas fa-times me-2"></i>Pasif
                         </a>
                     </div>
 
-                    <!-- Mesajlar -->
-                    <?php if (empty($messages)): ?>
+                    <!-- Hizmetler -->
+                    <?php if (empty($services)): ?>
                     <div class="card">
                         <div class="card-body text-center">
-                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                            <h5>Henüz mesaj bulunmuyor</h5>
-                            <p class="text-muted">İletişim formundan gelen mesajlar burada görünecek.</p>
+                            <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                            <h5>Henüz hizmet bulunmuyor</h5>
+                            <p class="text-muted">Yeni hizmetler ekleyerek başlayın.</p>
+                            <a href="add.php" class="btn btn-admin">
+                                <i class="fas fa-plus me-2"></i>İlk Hizmeti Ekle
+                            </a>
                         </div>
                     </div>
                     <?php else: ?>
-                    <?php foreach ($messages as $msg): ?>
-                    <div class="message-card <?php echo $msg['is_read'] ? '' : 'unread'; ?>">
-                        <div class="message-header">
-                            <div class="message-info">
-                                <div class="message-subject"><?php echo htmlspecialchars($msg['subject']); ?></div>
-                                <div class="message-meta">
-                                    <strong><?php echo htmlspecialchars($msg['name']); ?></strong> 
-                                    (<?php echo htmlspecialchars($msg['email']); ?>) - 
-                                    <?php echo format_date($msg['created_at'], 'd.m.Y H:i'); ?>
-                                    <?php if ($msg['ip_address']): ?>
-                                    - IP: <?php echo $msg['ip_address']; ?>
-                                    <?php endif; ?>
+                    <?php foreach ($services as $service): ?>
+                    <div class="service-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-1 text-center">
+                                <div class="service-icon">
+                                    <i class="<?php echo $service['icon']; ?>"></i>
                                 </div>
                             </div>
-                            <div class="message-actions">
-                                <?php if (!$msg['is_read']): ?>
-                                <form method="POST" style="display: inline;">
-                                    <input type="hidden" name="action" value="mark_read">
-                                    <input type="hidden" name="message_id" value="<?php echo $msg['id']; ?>">
-                                    <button type="submit" class="btn btn-success btn-sm" title="Okundu olarak işaretle">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                </form>
-                                <?php endif; ?>
-                                <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#messageModal<?php echo $msg['id']; ?>" title="Mesajı Görüntüle">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('Bu mesajı silmek istediğinizden emin misiniz?');">
-                                    <input type="hidden" name="action" value="delete">
-                                    <input type="hidden" name="message_id" value="<?php echo $msg['id']; ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Mesajı Sil">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
+                            <div class="col-md-6">
+                                <div class="service-title"><?php echo htmlspecialchars($service['title']); ?></div>
+                                <div class="service-description">
+                                    <?php echo htmlspecialchars(substr($service['description'], 0, 100)); ?>
+                                    <?php if (strlen($service['description']) > 100): ?>...<?php endif; ?>
+                                </div>
                             </div>
-                        </div>
-                        <div class="message-content">
-                            <?php echo nl2br(htmlspecialchars(substr($msg['message'], 0, 200))); ?>
-                            <?php if (strlen($msg['message']) > 200): ?>
-                            <span class="text-muted">...</span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Mesaj Detay Modal -->
-                    <div class="modal fade" id="messageModal<?php echo $msg['id']; ?>" tabindex="-1" aria-labelledby="messageModalLabel<?php echo $msg['id']; ?>" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="messageModalLabel<?php echo $msg['id']; ?>"><?php echo htmlspecialchars($msg['subject']); ?></h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p><strong>Gönderen:</strong> <?php echo htmlspecialchars($msg['name']); ?></p>
-                                            <p><strong>E-posta:</strong> <?php echo htmlspecialchars($msg['email']); ?></p>
-                                            <p><strong>Tarih:</strong> <?php echo format_date($msg['created_at'], 'd.m.Y H:i'); ?></p>
-                                            <?php if ($msg['ip_address']): ?>
-                                            <p><strong>IP Adresi:</strong> <?php echo $msg['ip_address']; ?></p>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p><strong>Konu:</strong> <?php echo htmlspecialchars($msg['subject']); ?></p>
-                                            <p><strong>Durum:</strong> 
-                                                <?php if ($msg['is_read']): ?>
-                                                <span class="badge bg-success">Okundu</span>
-                                                <?php else: ?>
-                                                <span class="badge bg-warning">Okunmadı</span>
-                                                <?php endif; ?>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <hr>
-                                    <h6>Mesaj:</h6>
-                                    <div class="message-full-content">
-                                        <?php echo nl2br(htmlspecialchars($msg['message'])); ?>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <?php if (!$msg['is_read']): ?>
-                                    <form method="POST" style="display: inline;">
-                                        <input type="hidden" name="action" value="mark_read">
-                                        <input type="hidden" name="message_id" value="<?php echo $msg['id']; ?>">
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="fas fa-check me-2"></i>Okundu Olarak İşaretle
+                            <div class="col-md-2 text-center">
+                                <span class="status-badge <?php echo $service['is_active'] ? 'status-active' : 'status-inactive'; ?>">
+                                    <?php echo $service['is_active'] ? 'Aktif' : 'Pasif'; ?>
+                                </span>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="service-actions">
+                                    <a href="edit.php?id=<?php echo $service['id']; ?>" class="btn btn-primary btn-sm" title="Düzenle">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    
+                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Bu hizmeti silmek istediğinizden emin misiniz?');">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="service_id" value="<?php echo $service['id']; ?>">
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Sil">
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
-                                    <?php endif; ?>
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                                    
+                                    <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="action" value="toggle_status">
+                                        <input type="hidden" name="service_id" value="<?php echo $service['id']; ?>">
+                                        <button type="submit" class="btn btn-<?php echo $service['is_active'] ? 'warning' : 'success'; ?> btn-sm" title="<?php echo $service['is_active'] ? 'Pasif Yap' : 'Aktif Yap'; ?>">
+                                            <i class="fas fa-<?php echo $service['is_active'] ? 'eye-slash' : 'eye'; ?>"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -516,11 +487,11 @@ $message = get_message();
 
                     <!-- Sayfalama -->
                     <?php if ($total_pages > 1): ?>
-                    <nav aria-label="Mesaj sayfaları">
+                    <nav aria-label="Hizmet sayfaları">
                         <ul class="pagination justify-content-center">
                             <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                             <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
-                                <a class="page-link" href="?filter=<?php echo $filter; ?>&p=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                <a class="page-link" href="?status=<?php echo $status_filter; ?>&p=<?php echo $i; ?>"><?php echo $i; ?></a>
                             </li>
                             <?php endfor; ?>
                         </ul>

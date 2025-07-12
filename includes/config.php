@@ -10,6 +10,30 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Hata yakalama fonksiyonu
+function handle_error($errno, $errstr, $errfile, $errline) {
+    if (!(error_reporting() & $errno)) {
+        return false;
+    }
+    
+    $error_message = "Hata [$errno] $errstr\n";
+    $error_message .= "Satır $errline dosyada $errfile\n";
+    
+    error_log($error_message);
+    
+    if (ini_get('display_errors')) {
+        echo "<div style='background: #f8d7da; color: #721c24; padding: 10px; margin: 10px; border: 1px solid #f5c6cb; border-radius: 5px;'>";
+        echo "<strong>Hata:</strong> $errstr<br>";
+        echo "<strong>Dosya:</strong> $errfile<br>";
+        echo "<strong>Satır:</strong> $errline";
+        echo "</div>";
+    }
+    
+    return true;
+}
+
+set_error_handler("handle_error");
+
 // Zaman dilimi ayarı
 date_default_timezone_set('Europe/Istanbul');
 
@@ -52,15 +76,23 @@ try {
     ];
     $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
 } catch (PDOException $e) {
-    die("Veritabanı bağlantı hatası: " . $e->getMessage());
+    error_log("PDO Veritabanı bağlantı hatası: " . $e->getMessage());
+    $pdo = null;
 }
 
 // MySQLi bağlantısı (eski kodlar için)
-$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-if ($conn->connect_error) {
-    die("Veritabanı bağlantı hatası: " . $conn->connect_error);
+try {
+    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    if ($conn->connect_error) {
+        error_log("MySQLi Veritabanı bağlantı hatası: " . $conn->connect_error);
+        $conn = null;
+    } else {
+        $conn->set_charset(DB_CHARSET);
+    }
+} catch (Exception $e) {
+    error_log("MySQLi Bağlantı hatası: " . $e->getMessage());
+    $conn = null;
 }
-$conn->set_charset(DB_CHARSET);
 
 // Güvenlik fonksiyonları
 function clean_input($data) {
@@ -132,11 +164,20 @@ function get_site_text($key, $default = '') {
     global $pdo;
     static $texts = null;
     
+    if ($pdo === null) {
+        return $default;
+    }
+    
     if ($texts === null) {
-        $stmt = $pdo->query("SELECT text_key, text_value FROM site_texts");
-        $texts = [];
-        while ($row = $stmt->fetch()) {
-            $texts[$row['text_key']] = $row['text_value'];
+        try {
+            $stmt = $pdo->query("SELECT text_key, text_value FROM site_texts");
+            $texts = [];
+            while ($row = $stmt->fetch()) {
+                $texts[$row['text_key']] = $row['text_value'];
+            }
+        } catch (Exception $e) {
+            error_log("Site metinleri yüklenirken hata: " . $e->getMessage());
+            $texts = [];
         }
     }
     
@@ -246,11 +287,10 @@ function log_activity($action, $details = '') {
     global $pdo;
     
     $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
-    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Guest';
     $ip = get_client_ip();
     
-    $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, username, action, details, ip_address) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$user_id, $username, $action, $details, $ip]);
+    $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$user_id, $action, $details, $ip, $_SERVER['HTTP_USER_AGENT'] ?? '']);
 }
 
 // Rate limiting

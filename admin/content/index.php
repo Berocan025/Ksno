@@ -144,26 +144,25 @@ $message = get_message();
         
         .content-card {
             background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
-            margin-bottom: 1.5rem;
         }
         
         .content-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
         }
         
         .content-icon {
-            font-size: 3rem;
+            font-size: 2rem;
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
         
         .content-title {
-            font-size: 1.5rem;
             font-weight: 600;
             color: var(--dark-color);
             margin-bottom: 0.5rem;
@@ -171,7 +170,7 @@ $message = get_message();
         
         .content-description {
             color: #6c757d;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
         
         .stats-card {
@@ -180,7 +179,7 @@ $message = get_message();
             border-radius: 15px;
             padding: 1.5rem;
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
         }
         
         .stats-number {
@@ -275,138 +274,158 @@ $message = get_message();
                     <div class="row mb-4">
                         <div class="col-md-3">
                             <div class="stats-card">
-                                <div class="stats-number">6</div>
-                                <div class="stats-label">Aktif Hizmet</div>
+                                <div class="stats-number">
+                                    <?php 
+                                    if ($pdo) {
+                                        $stmt = $pdo->query("SELECT COUNT(*) as total FROM services");
+                                        echo $stmt->fetch()['total'];
+                                    } else {
+                                        echo '0';
+                                    }
+                                    ?>
+                                </div>
+                                <div class="stats-label">Hizmet</div>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stats-card">
-                                <div class="stats-number">12</div>
+                                <div class="stats-number">
+                                    <?php 
+                                    if ($pdo) {
+                                        $stmt = $pdo->query("SELECT COUNT(*) as total FROM portfolio");
+                                        echo $stmt->fetch()['total'];
+                                    } else {
+                                        echo '0';
+                                    }
+                                    ?>
+                                </div>
                                 <div class="stats-label">Portföy Projesi</div>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stats-card">
-                                <div class="stats-number">24</div>
+                                <div class="stats-number">
+                                    <?php 
+                                    if ($pdo) {
+                                        $stmt = $pdo->query("SELECT COUNT(*) as total FROM gallery_photos");
+                                        $photos = $stmt->fetch()['total'];
+                                        $stmt = $pdo->query("SELECT COUNT(*) as total FROM gallery_videos");
+                                        $videos = $stmt->fetch()['total'];
+                                        echo $photos + $videos;
+                                    } else {
+                                        echo '0';
+                                    }
+                                    ?>
+                                </div>
                                 <div class="stats-label">Galeri İçeriği</div>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stats-card">
-                                <div class="stats-number">5</div>
-                                <div class="stats-label">Kategori</div>
+                                <div class="stats-number">
+                                    <?php 
+                                    if ($pdo) {
+                                        $stmt = $pdo->query("SELECT COUNT(*) as total FROM site_texts");
+                                        echo $stmt->fetch()['total'];
+                                    } else {
+                                        echo '0';
+                                    }
+                                    ?>
+                                </div>
+                                <div class="stats-label">Site Metni</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- İçerik Yönetimi Kartları -->
                     <div class="row">
-                        <div class="col-lg-4 col-md-6">
-                            <div class="content-card text-center">
-                                <div class="content-icon">
-                                    <i class="fas fa-cogs"></i>
-                                </div>
-                                <h3 class="content-title">Hizmet Yönetimi</h3>
-                                <p class="content-description">Sunduğunuz hizmetleri düzenleyin, yeni hizmetler ekleyin ve mevcut hizmetleri güncelleyin.</p>
-                                <a href="../services/" class="btn btn-admin">
-                                    <i class="fas fa-edit me-2"></i>Hizmetleri Yönet
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="content-card text-center">
-                                <div class="content-icon">
-                                    <i class="fas fa-briefcase"></i>
-                                </div>
-                                <h3 class="content-title">Portföy Yönetimi</h3>
-                                <p class="content-description">Portföy projelerinizi yönetin, yeni projeler ekleyin ve mevcut projeleri düzenleyin.</p>
-                                <a href="../portfolio/" class="btn btn-admin">
-                                    <i class="fas fa-edit me-2"></i>Portföyü Yönet
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="content-card text-center">
-                                <div class="content-icon">
-                                    <i class="fas fa-images"></i>
-                                </div>
-                                <h3 class="content-title">Galeri Yönetimi</h3>
-                                <p class="content-description">Fotoğraf ve video galerinizi yönetin, yeni içerikler ekleyin ve düzenleyin.</p>
-                                <a href="../gallery/" class="btn btn-admin">
-                                    <i class="fas fa-edit me-2"></i>Galeriyi Yönet
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="content-card text-center">
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="content-card">
                                 <div class="content-icon">
                                     <i class="fas fa-font"></i>
                                 </div>
-                                <h3 class="content-title">Metin Yönetimi</h3>
-                                <p class="content-description">Sitenizdeki tüm metinleri düzenleyin ve güncelleyin.</p>
+                                <div class="content-title">Metin Yönetimi</div>
+                                <div class="content-description">
+                                    Site genelindeki tüm metinleri düzenleyin ve yönetin.
+                                </div>
                                 <a href="../texts/" class="btn btn-admin">
-                                    <i class="fas fa-edit me-2"></i>Metinleri Yönet
+                                    <i class="fas fa-edit me-2"></i>Metinleri Düzenle
                                 </a>
                             </div>
                         </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="content-card text-center">
+                        
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="content-card">
+                                <div class="content-icon">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <div class="content-title">Hizmet Yönetimi</div>
+                                <div class="content-description">
+                                    Sunduğunuz hizmetleri ekleyin, düzenleyin ve yönetin.
+                                </div>
+                                <a href="../services/" class="btn btn-admin">
+                                    <i class="fas fa-list me-2"></i>Hizmetleri Yönet
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="content-card">
+                                <div class="content-icon">
+                                    <i class="fas fa-briefcase"></i>
+                                </div>
+                                <div class="content-title">Portföy Yönetimi</div>
+                                <div class="content-description">
+                                    Portföy projelerinizi ekleyin ve yönetin.
+                                </div>
+                                <a href="../portfolio/" class="btn btn-admin">
+                                    <i class="fas fa-folder me-2"></i>Portföyü Yönet
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="content-card">
+                                <div class="content-icon">
+                                    <i class="fas fa-images"></i>
+                                </div>
+                                <div class="content-title">Galeri Yönetimi</div>
+                                <div class="content-description">
+                                    Fotoğraf ve video galerinizi yönetin.
+                                </div>
+                                <a href="../gallery/" class="btn btn-admin">
+                                    <i class="fas fa-photo-video me-2"></i>Galeriyi Yönet
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="content-card">
                                 <div class="content-icon">
                                     <i class="fas fa-envelope"></i>
                                 </div>
-                                <h3 class="content-title">Mesaj Yönetimi</h3>
-                                <p class="content-description">Gelen iletişim mesajlarını görüntüleyin ve yönetin.</p>
+                                <div class="content-title">Mesaj Yönetimi</div>
+                                <div class="content-description">
+                                    İletişim formundan gelen mesajları görüntüleyin.
+                                </div>
                                 <a href="../messages/" class="btn btn-admin">
-                                    <i class="fas fa-edit me-2"></i>Mesajları Yönet
+                                    <i class="fas fa-inbox me-2"></i>Mesajları Görüntüle
                                 </a>
                             </div>
                         </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="content-card text-center">
+                        
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="content-card">
                                 <div class="content-icon">
                                     <i class="fas fa-cog"></i>
                                 </div>
-                                <h3 class="content-title">Site Ayarları</h3>
-                                <p class="content-description">Site genel ayarlarını, logo, sosyal medya linklerini düzenleyin.</p>
+                                <div class="content-title">Site Ayarları</div>
+                                <div class="content-description">
+                                    Logo, sosyal medya linkleri ve genel ayarları yönetin.
+                                </div>
                                 <a href="../settings/" class="btn btn-admin">
-                                    <i class="fas fa-edit me-2"></i>Ayarları Yönet
+                                    <i class="fas fa-sliders-h me-2"></i>Ayarları Düzenle
                                 </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Hızlı İşlemler -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Hızlı İşlemler</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <a href="../services/add.php" class="btn btn-outline-primary w-100">
-                                        <i class="fas fa-plus me-2"></i>Yeni Hizmet Ekle
-                                    </a>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <a href="../portfolio/add.php" class="btn btn-outline-success w-100">
-                                        <i class="fas fa-plus me-2"></i>Yeni Proje Ekle
-                                    </a>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <a href="../gallery/add.php" class="btn btn-outline-info w-100">
-                                        <i class="fas fa-plus me-2"></i>Galeri İçeriği Ekle
-                                    </a>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <a href="../messages/" class="btn btn-outline-warning w-100">
-                                        <i class="fas fa-envelope me-2"></i>Mesajları Görüntüle
-                                    </a>
-                                </div>
                             </div>
                         </div>
                     </div>
