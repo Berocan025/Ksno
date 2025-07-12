@@ -48,14 +48,20 @@ document.addEventListener('DOMContentLoaded', function() {
 function hideLoadingSpinner() {
     const spinner = document.getElementById('loading-spinner');
     if (spinner) {
-        setTimeout(() => {
-            spinner.style.opacity = '0';
-            setTimeout(() => {
-                spinner.style.display = 'none';
-            }, 300);
-        }, 500);
+        // Hemen gizle, bekleme yapma
+        spinner.style.opacity = '0';
+        spinner.style.display = 'none';
     }
 }
+
+// Sayfa tamamen yüklendiğinde de spinner'ı gizle
+window.addEventListener('load', function() {
+    const spinner = document.getElementById('loading-spinner');
+    if (spinner) {
+        spinner.style.opacity = '0';
+        spinner.style.display = 'none';
+    }
+});
 
 /**
  * AOS Animasyonları
@@ -81,7 +87,7 @@ function initSmoothScroll() {
             e.preventDefault();
             const target = document.querySelector(this.getAttribute('href'));
             if (target) {
-                const headerHeight = document.querySelector('.header').offsetHeight;
+                const headerHeight = document.querySelector('.header') ? document.querySelector('.header').offsetHeight : 0;
                 const targetPosition = target.offsetTop - headerHeight;
                 
                 window.scrollTo({
@@ -391,6 +397,8 @@ function initPortfolioFilters() {
  */
 function initHeaderScroll() {
     const header = document.querySelector('.header');
+    if (!header) return;
+    
     let lastScrollTop = 0;
     
     window.addEventListener('scroll', function() {

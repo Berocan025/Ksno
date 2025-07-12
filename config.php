@@ -22,7 +22,7 @@ date_default_timezone_set('Europe/Istanbul');
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'bonusboss');
 define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_PASS', ''); // Şifrenizi buraya yazın
 define('DB_CHARSET', 'utf8mb4');
 
 // Site sabitleri
@@ -35,6 +35,7 @@ define('ALLOWED_IMAGE_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
 define('SESSION_TIMEOUT', 3600); // 1 saat
 
 // PDO veritabanı bağlantısı
+$pdo = null;
 try {
     $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
     $pdo = new PDO($dsn, DB_USER, DB_PASS, [
@@ -43,7 +44,9 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (PDOException $e) {
-    die("Veritabanı bağlantı hatası: " . $e->getMessage());
+    // Veritabanı bağlantı hatası durumunda site çalışmaya devam etsin
+    error_log("Veritabanı bağlantı hatası: " . $e->getMessage());
+    $pdo = null;
 }
 
 /**
@@ -98,6 +101,8 @@ function verifyPassword($password, $hash) {
 // Site ayarı al
 function getSetting($key, $default = '') {
     global $pdo;
+    if (!$pdo) return $default;
+    
     try {
         $stmt = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_key = ?");
         $stmt->execute([$key]);
@@ -111,6 +116,8 @@ function getSetting($key, $default = '') {
 // Site ayarı güncelle
 function updateSetting($key, $value) {
     global $pdo;
+    if (!$pdo) return false;
+    
     try {
         $stmt = $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = ?");
         return $stmt->execute([$value, $key]);
@@ -126,6 +133,8 @@ function updateSetting($key, $value) {
 // Site metni al
 function getSiteText($key, $default = '') {
     global $pdo;
+    if (!$pdo) return $default;
+    
     try {
         $stmt = $pdo->prepare("SELECT text_value FROM site_texts WHERE text_key = ?");
         $stmt->execute([$key]);
@@ -139,6 +148,8 @@ function getSiteText($key, $default = '') {
 // Site metni güncelle
 function updateSiteText($key, $value) {
     global $pdo;
+    if (!$pdo) return false;
+    
     try {
         $stmt = $pdo->prepare("UPDATE site_texts SET text_value = ? WHERE text_key = ?");
         return $stmt->execute([$value, $key]);
@@ -197,6 +208,8 @@ function deleteFile($filename, $directory) {
 // Aktivite logu
 function logActivity($table, $recordId, $action, $oldValues = null, $newValues = null) {
     global $pdo;
+    if (!$pdo) return false;
+    
     try {
         $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, table_name, record_id, old_values, new_values, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
@@ -381,6 +394,8 @@ function getClientIP() {
 // Rate limiting kontrolü
 function checkRateLimit($action, $limit = 10, $period = 3600) {
     global $pdo;
+    if (!$pdo) return true;
+    
     $ip = getClientIP();
     
     try {
