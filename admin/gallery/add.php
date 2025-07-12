@@ -21,11 +21,11 @@ if (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT) {
 $_SESSION['last_activity'] = time();
 
 $message = '';
+$media_type = isset($_GET['type']) ? clean_input($_GET['type']) : 'photo';
 
 // Kategorileri getir
-$categories = [];
 try {
-    $stmt = $pdo->query("SELECT * FROM categories WHERE is_active = 1 ORDER BY name ASC");
+    $stmt = $pdo->query("SELECT * FROM categories WHERE type = 'gallery' AND is_active = 1 ORDER BY sort_order ASC");
     $categories = $stmt->fetchAll();
 } catch (Exception $e) {
     $message = 'Kategoriler yüklenirken hata oluştu: ' . $e->getMessage();
@@ -36,39 +36,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = clean_input($_POST['title']);
     $description = clean_input($_POST['description']);
     $category_id = (int)$_POST['category_id'];
-    $media_type = clean_input($_POST['media_type']);
+    $sort_order = (int)$_POST['sort_order'];
     $is_active = isset($_POST['is_active']) ? 1 : 0;
-    
-    // Dosya yükleme
-    $file_path = '';
-    if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = '../../assets/uploads/gallery/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0755, true);
-        }
-        
-        $file_extension = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
-        $new_filename = 'gallery_' . time() . '.' . $file_extension;
-        $upload_path = $upload_dir . $new_filename;
-        
-        $allowed_types = ($media_type === 'video') ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES;
-        
-        if (in_array($file_extension, $allowed_types) && move_uploaded_file($_FILES['file']['tmp_name'], $upload_path)) {
-            $file_path = 'assets/uploads/gallery/' . $new_filename;
-        }
-    }
+    $media_type = clean_input($_POST['media_type']);
     
     try {
-        if ($media_type === 'video') {
-            $stmt = $pdo->prepare("INSERT INTO gallery_videos (title, description, category_id, video_path, is_active, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$title, $description, $category_id, $file_path, $is_active]);
+        if ($media_type === 'photo') {
+            // Fotoğraf yükleme
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = '../../assets/uploads/gallery/photos/';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+                
+                $file_extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+                $new_filename = 'photo_' . time() . '.' . $file_extension;
+                $upload_path = $upload_dir . $new_filename;
+                
+                if (in_array($file_extension, ALLOWED_IMAGE_TYPES) && move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
+                    $image_path = 'assets/uploads/gallery/photos/' . $new_filename;
+                    
+                    $stmt = $pdo->prepare("INSERT INTO gallery_photos (title, description, image_path, category_id, is_active, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
+                    if ($stmt->execute([$title, $description, $image_path, $category_id, $is_active, $sort_order])) {
+                        log_activity('gallery_photo_created', "Yeni galeri fotoğrafı eklendi: $title");
+                        redirect('index.php');
+                    }
+                } else {
+                    $message = 'Fotoğraf yüklenirken hata oluştu.';
+                }
+            } else {
+                $message = 'Lütfen bir fotoğraf seçin.';
+            }
         } else {
-            $stmt = $pdo->prepare("INSERT INTO gallery_photos (title, description, category_id, image_path, is_active, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$title, $description, $category_id, $file_path, $is_active]);
+            // Video ekleme
+            $video_path = clean_input($_POST['video_path']);
+            $thumbnail = null;
+            
+            if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = '../../assets/uploads/gallery/thumbnails/';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+                
+                $file_extension = strtolower(pathinfo($_FILES['thumbnail']['name'], PATHINFO_EXTENSION));
+                $new_filename = 'thumbnail_' . time() . '.' . $file_extension;
+                $upload_path = $upload_dir . $new_filename;
+                
+                if (in_array($file_extension, ALLOWED_IMAGE_TYPES) && move_uploaded_file($_FILES['thumbnail']['tmp_name'], $upload_path)) {
+                    $thumbnail = 'assets/uploads/gallery/thumbnails/' . $new_filename;
+                }
+            }
+            
+            $stmt = $pdo->prepare("INSERT INTO gallery_videos (title, description, video_path, thumbnail, category_id, is_active, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+            if ($stmt->execute([$title, $description, $video_path, $thumbnail, $category_id, $is_active, $sort_order])) {
+                log_activity('gallery_video_created', "Yeni galeri videosu eklendi: $title");
+                redirect('index.php');
+            }
         }
-        
-        log_activity('gallery_added', "Yeni galeri öğesi eklendi: $title");
-        redirect('index.php');
     } catch (Exception $e) {
         $message = 'Galeri öğesi eklenirken hata oluştu: ' . $e->getMessage();
     }
@@ -210,6 +234,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: var(--dark-color);
             margin-bottom: 0.5rem;
         }
+        
+        .media-type-tabs {
+            margin-bottom: 2rem;
+        }
+        
+        .media-type-tabs .nav-link {
+            border-radius: 10px;
+            margin-right: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .media-type-tabs .nav-link.active {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -311,84 +350,159 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <?php endif; ?>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Galeri Bilgileri</h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" enctype="multipart/form-data">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="mb-3">
-                                        <label for="title" class="form-label">Başlık *</label>
-                                        <input type="text" class="form-control" id="title" name="title" required>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="description" class="form-label">Açıklama</label>
-                                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                                    </div>
+                <!-- Medya Tipi Seçimi -->
+                <div class="media-type-tabs">
+                    <ul class="nav nav-tabs" id="mediaTypeTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link <?php echo $media_type === 'photo' ? 'active' : ''; ?>" id="photo-tab" data-bs-toggle="tab" data-bs-target="#photo" type="button" role="tab">
+                                <i class="fas fa-image me-2"></i>Fotoğraf
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link <?php echo $media_type === 'video' ? 'active' : ''; ?>" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab">
+                                <i class="fas fa-video me-2"></i>Video
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab-content" id="mediaTypeTabContent">
+                    <!-- Fotoğraf Ekleme -->
+                    <div class="tab-pane fade <?php echo $media_type === 'photo' ? 'show active' : ''; ?>" id="photo" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-image me-2"></i>Fotoğraf Ekle</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" enctype="multipart/form-data">
+                                    <input type="hidden" name="media_type" value="photo">
                                     
                                     <div class="row">
-                                        <div class="col-md-6">
+                                        <div class="col-md-8">
                                             <div class="mb-3">
-                                                <label for="media_type" class="form-label">Medya Türü *</label>
-                                                <select class="form-select" id="media_type" name="media_type" required>
-                                                    <option value="">Tür Seçin</option>
-                                                    <option value="image">Resim</option>
-                                                    <option value="video">Video</option>
-                                                </select>
+                                                <label for="title" class="form-label">Başlık *</label>
+                                                <input type="text" class="form-control" id="title" name="title" required>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="description" class="form-label">Açıklama</label>
+                                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="image" class="form-label">Fotoğraf *</label>
+                                                <input type="file" class="form-control" id="image" name="image" accept="image/*" required>
+                                                <small class="text-muted">Önerilen boyut: 1200x800px</small>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
+                                        
+                                        <div class="col-md-4">
                                             <div class="mb-3">
                                                 <label for="category_id" class="form-label">Kategori</label>
                                                 <select class="form-select" id="category_id" name="category_id">
                                                     <option value="">Kategori Seçin</option>
                                                     <?php foreach ($categories as $category): ?>
-                                                    <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                                                    <option value="<?php echo $category['id']; ?>"><?php echo htmlspecialchars($category['name']); ?></option>
                                                     <?php endforeach; ?>
                                                 </select>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="sort_order" class="form-label">Sıralama</label>
+                                                <input type="number" class="form-control" id="sort_order" name="sort_order" value="0" min="0">
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                                    <label class="form-check-label" for="is_active">
+                                                        Aktif
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <div class="mb-3">
-                                        <label for="file" class="form-label">Dosya *</label>
-                                        <input type="file" class="form-control" id="file" name="file" accept="image/*,video/*" required>
-                                        <small class="text-muted">
-                                            <span id="fileInfo">Resim: JPG, PNG, GIF, WEBP | Video: MP4, AVI, MOV, WMV</span>
-                                        </small>
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-admin">
+                                            <i class="fas fa-save me-2"></i>Fotoğrafı Kaydet
+                                        </button>
                                     </div>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
-                                            <label class="form-check-label" for="is_active">
-                                                Aktif
-                                            </label>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Ekleme -->
+                    <div class="tab-pane fade <?php echo $media_type === 'video' ? 'show active' : ''; ?>" id="video" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-video me-2"></i>Video Ekle</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" enctype="multipart/form-data">
+                                    <input type="hidden" name="media_type" value="video">
+                                    
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label for="video_title" class="form-label">Başlık *</label>
+                                                <input type="text" class="form-control" id="video_title" name="title" required>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="video_description" class="form-label">Açıklama</label>
+                                                <textarea class="form-control" id="video_description" name="description" rows="3"></textarea>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="video_path" class="form-label">Video URL *</label>
+                                                <input type="url" class="form-control" id="video_path" name="video_path" placeholder="https://www.youtube.com/watch?v=..." required>
+                                                <small class="text-muted">YouTube, Vimeo veya diğer video platformlarından URL</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="video_category_id" class="form-label">Kategori</label>
+                                                <select class="form-select" id="video_category_id" name="category_id">
+                                                    <option value="">Kategori Seçin</option>
+                                                    <?php foreach ($categories as $category): ?>
+                                                    <option value="<?php echo $category['id']; ?>"><?php echo htmlspecialchars($category['name']); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="thumbnail" class="form-label">Önizleme Görseli</label>
+                                                <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
+                                                <small class="text-muted">Video önizleme görseli</small>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="video_sort_order" class="form-label">Sıralama</label>
+                                                <input type="number" class="form-control" id="video_sort_order" name="sort_order" value="0" min="0">
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="video_is_active" name="is_active" checked>
+                                                    <label class="form-check-label" for="video_is_active">
+                                                        Aktif
+                                                    </label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     
-                                    <div class="alert alert-info">
-                                        <h6><i class="fas fa-info-circle me-2"></i>Dosya Bilgileri</h6>
-                                        <ul class="mb-0">
-                                            <li>Maksimum dosya boyutu: 5MB</li>
-                                            <li>Resim boyutu: 1920x1080px önerilir</li>
-                                            <li>Video süresi: 5 dakika önerilir</li>
-                                        </ul>
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-admin">
+                                            <i class="fas fa-save me-2"></i>Videoyu Kaydet
+                                        </button>
                                     </div>
-                                </div>
+                                </form>
                             </div>
-                            
-                            <div class="text-end">
-                                <button type="submit" class="btn btn-admin">
-                                    <i class="fas fa-save me-2"></i>Galeri Öğesini Kaydet
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -397,24 +511,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        // Medya türü değiştiğinde dosya kabul türünü güncelle
-        document.getElementById('media_type').addEventListener('change', function() {
-            const fileInput = document.getElementById('file');
-            const fileInfo = document.getElementById('fileInfo');
-            
-            if (this.value === 'image') {
-                fileInput.accept = 'image/*';
-                fileInfo.textContent = 'Resim: JPG, PNG, GIF, WEBP';
-            } else if (this.value === 'video') {
-                fileInput.accept = 'video/*';
-                fileInfo.textContent = 'Video: MP4, AVI, MOV, WMV';
-            } else {
-                fileInput.accept = 'image/*,video/*';
-                fileInfo.textContent = 'Resim: JPG, PNG, GIF, WEBP | Video: MP4, AVI, MOV, WMV';
-            }
-        });
-    </script>
 </body>
 </html>

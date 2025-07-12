@@ -68,10 +68,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_logo'])) {
         show_message('Güvenlik hatası. Lütfen tekrar deneyin.', 'error');
     } else {
         if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-            $uploaded_file = upload_file($_FILES['logo'], UPLOAD_PATH);
-            if ($uploaded_file) {
+            $upload_dir = '../../assets/uploads/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            $file_extension = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+            $new_filename = 'logo_' . time() . '.' . $file_extension;
+            $upload_path = $upload_dir . $new_filename;
+            
+            if (in_array($file_extension, ALLOWED_IMAGE_TYPES) && move_uploaded_file($_FILES['logo']['tmp_name'], $upload_path)) {
+                $logo_path = 'assets/uploads/' . $new_filename;
                 $stmt = $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'site_logo'");
-                if ($stmt->execute([$uploaded_file])) {
+                if ($stmt->execute([$logo_path])) {
                     show_message('Logo başarıyla yüklendi.', 'success');
                 } else {
                     show_message('Logo kaydedilirken bir hata oluştu.', 'error');

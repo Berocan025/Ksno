@@ -3,7 +3,7 @@
  * BonusBoss Casino Yayıncısı Portföy Sitesi
  * Yazılımcı: BERAT K
  * 
- * Admin Panel - Portföy Ekleme
+ * Admin Panel - Hizmet Düzenleme
  */
 
 require_once '../../includes/config.php';
@@ -21,53 +21,61 @@ if (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT) {
 $_SESSION['last_activity'] = time();
 
 $message = '';
+$service = null;
 
-// Kategorileri getir
+// Hizmet ID kontrolü
+$service_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if (!$service_id) {
+    redirect('index.php');
+}
+
+// Hizmeti getir
 try {
-    $stmt = $pdo->query("SELECT * FROM categories WHERE type = 'portfolio' AND is_active = 1 ORDER BY sort_order ASC");
-    $categories = $stmt->fetchAll();
+    $stmt = $pdo->prepare("SELECT * FROM services WHERE id = ?");
+    $stmt->execute([$service_id]);
+    $service = $stmt->fetch();
+    
+    if (!$service) {
+        redirect('index.php');
+    }
 } catch (Exception $e) {
-    $message = 'Kategoriler yüklenirken hata oluştu: ' . $e->getMessage();
+    $message = 'Hizmet yüklenirken hata oluştu: ' . $e->getMessage();
 }
 
 // Form gönderildi mi?
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = clean_input($_POST['title']);
     $description = clean_input($_POST['description']);
+    $icon = clean_input($_POST['icon']);
     $content = clean_input($_POST['content']);
-    $category_id = (int)$_POST['category_id'];
-    $client_name = clean_input($_POST['client_name']);
-    $project_date = clean_input($_POST['project_date']);
-    $project_url = clean_input($_POST['project_url']);
     $sort_order = (int)$_POST['sort_order'];
-    $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     
     // Resim yükleme
-    $image_path = null;
+    $image_path = $service['image_path'];
     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = '../../assets/uploads/portfolio/';
+        $upload_dir = '../../assets/uploads/services/';
         if (!is_dir($upload_dir)) {
             mkdir($upload_dir, 0755, true);
         }
         
         $file_extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-        $new_filename = 'portfolio_' . time() . '.' . $file_extension;
+        $new_filename = 'service_' . time() . '.' . $file_extension;
         $upload_path = $upload_dir . $new_filename;
         
         if (in_array($file_extension, ALLOWED_IMAGE_TYPES) && move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
-            $image_path = 'assets/uploads/portfolio/' . $new_filename;
+            $image_path = 'assets/uploads/services/' . $new_filename;
         }
     }
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO portfolio (title, description, content, image_path, category_id, client_name, project_date, project_url, is_featured, is_active, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
-        if ($stmt->execute([$title, $description, $content, $image_path, $category_id, $client_name, $project_date, $project_url, $is_featured, $is_active, $sort_order])) {
-            log_activity('portfolio_created', "Yeni portföy eklendi: $title");
+        $stmt = $pdo->prepare("UPDATE services SET title = ?, description = ?, icon = ?, content = ?, image_path = ?, sort_order = ?, is_active = ?, updated_at = NOW() WHERE id = ?");
+        if ($stmt->execute([$title, $description, $icon, $content, $image_path, $sort_order, $is_active, $service_id])) {
+            log_activity('service_updated', "Hizmet güncellendi: $title");
             redirect('index.php');
         }
     } catch (Exception $e) {
-        $message = 'Portföy eklenirken hata oluştu: ' . $e->getMessage();
+        $message = 'Hizmet güncellenirken hata oluştu: ' . $e->getMessage();
     }
 }
 ?>
@@ -76,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portföy Ekle - BonusBoss Admin</title>
+    <title>Hizmet Düzenle - BonusBoss Admin</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -207,6 +215,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: var(--dark-color);
             margin-bottom: 0.5rem;
         }
+        
+        .icon-preview {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin: 1rem 0;
+        }
+        
+        .current-image {
+            max-width: 200px;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
     </style>
 </head>
 <body>
@@ -252,13 +272,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="../services/index.php">
+                            <a class="nav-link active" href="index.php">
                                 <i class="fas fa-cogs"></i>
                                 Hizmetler
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="index.php">
+                            <a class="nav-link" href="../portfolio/index.php">
                                 <i class="fas fa-briefcase"></i>
                                 Portföy
                             </a>
@@ -294,7 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Main Content -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Yeni Portföy Ekle</h1>
+                    <h1 class="h2">Hizmet Düzenle</h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
                         <a href="index.php" class="btn btn-admin">
                             <i class="fas fa-arrow-left me-2"></i>Geri Dön
@@ -310,82 +330,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Portföy Bilgileri</h5>
+                        <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Hizmet Bilgileri</h5>
                     </div>
                     <div class="card-body">
                         <form method="POST" enctype="multipart/form-data">
                             <div class="row">
                                 <div class="col-md-8">
                                     <div class="mb-3">
-                                        <label for="title" class="form-label">Proje Başlığı *</label>
-                                        <input type="text" class="form-control" id="title" name="title" required>
+                                        <label for="title" class="form-label">Hizmet Başlığı *</label>
+                                        <input type="text" class="form-control" id="title" name="title" value="<?php echo htmlspecialchars($service['title']); ?>" required>
                                     </div>
                                     
                                     <div class="mb-3">
-                                        <label for="description" class="form-label">Kısa Açıklama *</label>
-                                        <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                                        <label for="description" class="form-label">Açıklama *</label>
+                                        <textarea class="form-control" id="description" name="description" rows="3" required><?php echo htmlspecialchars($service['description']); ?></textarea>
                                     </div>
                                     
                                     <div class="mb-3">
                                         <label for="content" class="form-label">Detaylı İçerik</label>
-                                        <textarea class="form-control" id="content" name="content" rows="8"></textarea>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="client_name" class="form-label">Müşteri Adı</label>
-                                                <input type="text" class="form-control" id="client_name" name="client_name">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="project_date" class="form-label">Proje Tarihi</label>
-                                                <input type="date" class="form-control" id="project_date" name="project_date">
-                                            </div>
-                                        </div>
+                                        <textarea class="form-control" id="content" name="content" rows="8"><?php echo htmlspecialchars($service['content']); ?></textarea>
                                     </div>
                                     
                                     <div class="mb-3">
-                                        <label for="project_url" class="form-label">Proje URL</label>
-                                        <input type="url" class="form-control" id="project_url" name="project_url" placeholder="https://example.com">
+                                        <label for="icon" class="form-label">İkon (Font Awesome) *</label>
+                                        <input type="text" class="form-control" id="icon" name="icon" value="<?php echo htmlspecialchars($service['icon']); ?>" placeholder="fas fa-rocket" required>
+                                        <div class="icon-preview" id="iconPreview">
+                                            <i class="<?php echo $service['icon']; ?>"></i>
+                                        </div>
+                                        <small class="text-muted">Font Awesome ikon sınıfını girin (örn: fas fa-rocket)</small>
                                     </div>
                                 </div>
                                 
                                 <div class="col-md-4">
                                     <div class="mb-3">
-                                        <label for="category_id" class="form-label">Kategori *</label>
-                                        <select class="form-select" id="category_id" name="category_id" required>
-                                            <option value="">Kategori Seçin</option>
-                                            <?php foreach ($categories as $category): ?>
-                                            <option value="<?php echo $category['id']; ?>"><?php echo htmlspecialchars($category['name']); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="image" class="form-label">Proje Görseli</label>
+                                        <label for="image" class="form-label">Hizmet Görseli</label>
                                         <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                                        <small class="text-muted">Önerilen boyut: 800x600px</small>
+                                        <small class="text-muted">Önerilen boyut: 400x300px</small>
+                                        
+                                        <?php if ($service['image_path']): ?>
+                                        <div class="mt-3">
+                                            <label class="form-label">Mevcut Görsel:</label>
+                                            <img src="../../<?php echo $service['image_path']; ?>" alt="Mevcut görsel" class="current-image">
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                     
                                     <div class="mb-3">
                                         <label for="sort_order" class="form-label">Sıralama</label>
-                                        <input type="number" class="form-control" id="sort_order" name="sort_order" value="0" min="0">
+                                        <input type="number" class="form-control" id="sort_order" name="sort_order" value="<?php echo $service['sort_order']; ?>" min="0">
                                     </div>
                                     
                                     <div class="mb-3">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured">
-                                            <label class="form-check-label" for="is_featured">
-                                                Öne Çıkan Proje
-                                            </label>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" <?php echo $service['is_active'] ? 'checked' : ''; ?>>
                                             <label class="form-check-label" for="is_active">
                                                 Aktif
                                             </label>
@@ -396,7 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             <div class="text-end">
                                 <button type="submit" class="btn btn-admin">
-                                    <i class="fas fa-save me-2"></i>Portföyü Kaydet
+                                    <i class="fas fa-save me-2"></i>Hizmeti Güncelle
                                 </button>
                             </div>
                         </form>
@@ -408,5 +405,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // İkon önizleme
+        document.getElementById('icon').addEventListener('input', function() {
+            const icon = this.value;
+            const preview = document.getElementById('iconPreview');
+            if (icon) {
+                preview.innerHTML = `<i class="${icon}"></i>`;
+            } else {
+                preview.innerHTML = '';
+            }
+        });
+    </script>
 </body>
 </html>

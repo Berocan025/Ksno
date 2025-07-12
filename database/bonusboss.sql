@@ -210,7 +210,7 @@ CREATE TABLE `services` (
   `title` varchar(255) NOT NULL,
   `description` text,
   `icon` varchar(100) DEFAULT NULL,
-  `image` varchar(255) DEFAULT NULL,
+  `image_path` varchar(255) DEFAULT NULL,
   `content` longtext,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `sort_order` int(11) NOT NULL DEFAULT 0,
@@ -263,9 +263,9 @@ CREATE TABLE `portfolio` (
   `title` varchar(255) NOT NULL,
   `description` text,
   `content` longtext,
-  `image` varchar(255) DEFAULT NULL,
+  `image_path` varchar(255) DEFAULT NULL,
   `category_id` int(11) DEFAULT NULL,
-  `client` varchar(255) DEFAULT NULL,
+  `client_name` varchar(255) DEFAULT NULL,
   `project_date` date DEFAULT NULL,
   `project_url` varchar(255) DEFAULT NULL,
   `is_featured` tinyint(1) NOT NULL DEFAULT 0,
@@ -286,7 +286,7 @@ CREATE TABLE `gallery_photos` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
   `description` text,
-  `image` varchar(255) NOT NULL,
+  `image_path` varchar(255) NOT NULL,
   `category_id` int(11) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `sort_order` int(11) NOT NULL DEFAULT 0,
@@ -305,7 +305,7 @@ CREATE TABLE `gallery_videos` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
   `description` text,
-  `video_url` varchar(255) NOT NULL,
+  `video_path` varchar(255) NOT NULL,
   `thumbnail` varchar(255) DEFAULT NULL,
   `category_id` int(11) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
@@ -352,6 +352,20 @@ CREATE TABLE `activity_logs` (
   KEY `action` (`action`),
   KEY `created_at` (`created_at`),
   CONSTRAINT `activity_logs_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+-- Tablo: rate_limits (Rate limiting)
+-- --------------------------------------------------------
+
+CREATE TABLE `rate_limits` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ip_address` varchar(45) NOT NULL,
+  `action` varchar(100) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `ip_action` (`ip_address`, `action`),
+  KEY `created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------

@@ -27,11 +27,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = clean_input($_POST['title']);
     $description = clean_input($_POST['description']);
     $icon = clean_input($_POST['icon']);
+    $content = clean_input($_POST['content']);
     $sort_order = (int)$_POST['sort_order'];
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     
     // Resim yükleme
-    $image_path = '';
+    $image_path = null;
     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
         $upload_dir = '../../assets/uploads/services/';
         if (!is_dir($upload_dir)) {
@@ -48,9 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO services (title, description, icon, image_path, sort_order, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-        if ($stmt->execute([$title, $description, $icon, $image_path, $sort_order, $is_active])) {
-            log_activity('service_added', "Yeni hizmet eklendi: $title");
+        $stmt = $pdo->prepare("INSERT INTO services (title, description, icon, content, image_path, sort_order, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        if ($stmt->execute([$title, $description, $icon, $content, $image_path, $sort_order, $is_active])) {
+            log_activity('service_created', "Yeni hizmet eklendi: $title");
             redirect('index.php');
         }
     } catch (Exception $e) {
@@ -316,7 +317,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     
                                     <div class="mb-3">
                                         <label for="description" class="form-label">Açıklama *</label>
-                                        <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                                        <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="content" class="form-label">Detaylı İçerik</label>
+                                        <textarea class="form-control" id="content" name="content" rows="8"></textarea>
                                     </div>
                                     
                                     <div class="mb-3">

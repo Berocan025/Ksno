@@ -71,6 +71,56 @@ $texts = $stmt->fetchAll();
 $pages = $pdo->query("SELECT DISTINCT page_name FROM site_texts ORDER BY page_name")->fetchAll();
 $sections = $pdo->query("SELECT DISTINCT section FROM site_texts ORDER BY section")->fetchAll();
 
+// Toplu güncelleme
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_update'])) {
+    if (!verify_csrf_token($_POST['csrf_token'])) {
+        show_message('Güvenlik hatası. Lütfen tekrar deneyin.', 'error');
+    } else {
+        $success = true;
+        foreach ($_POST['texts'] as $text_id => $text_value) {
+            $stmt = $pdo->prepare("UPDATE site_texts SET text_value = ?, updated_at = NOW() WHERE id = ?");
+            if (!$stmt->execute([clean_input($text_value), $text_id])) {
+                $success = false;
+                break;
+            }
+        }
+        
+        if ($success) {
+            show_message('Metinler başarıyla güncellendi.', 'success');
+        } else {
+            show_message('Metinler güncellenirken bir hata oluştu.', 'error');
+        }
+        
+        redirect('index.php');
+    }
+}
+
+// Yeni metin ekleme
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_text'])) {
+    if (!verify_csrf_token($_POST['csrf_token'])) {
+        show_message('Güvenlik hatası. Lütfen tekrar deneyin.', 'error');
+    } else {
+        $text_key = clean_input($_POST['text_key']);
+        $text_value = clean_input($_POST['text_value']);
+        $page_name = clean_input($_POST['page_name']);
+        $section = clean_input($_POST['section']);
+        $description = clean_input($_POST['description']);
+        
+        try {
+            $stmt = $pdo->prepare("INSERT INTO site_texts (text_key, text_value, page_name, section, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+            if ($stmt->execute([$text_key, $text_value, $page_name, $section, $description])) {
+                show_message('Yeni metin başarıyla eklendi.', 'success');
+            } else {
+                show_message('Metin eklenirken bir hata oluştu.', 'error');
+            }
+        } catch (Exception $e) {
+            show_message('Metin eklenirken hata oluştu: ' . $e->getMessage(), 'error');
+        }
+        
+        redirect('index.php');
+    }
+}
+
 // Mesaj göster
 $message = get_message();
 ?>
@@ -406,14 +456,14 @@ $message = get_message();
                     <!-- Actions -->
                     <div class="row mb-3">
                         <div class="col-12">
-                            <a href="bulk_edit.php" class="btn btn-admin">
+                            <button type="button" class="btn btn-admin" data-bs-toggle="modal" data-bs-target="#bulkEditModal">
                                 <i class="fas fa-edit me-2"></i>
                                 Toplu Düzenleme
-                            </a>
-                            <a href="add.php" class="btn btn-admin">
+                            </button>
+                            <button type="button" class="btn btn-admin" data-bs-toggle="modal" data-bs-target="#addTextModal">
                                 <i class="fas fa-plus me-2"></i>
                                 Yeni Metin Ekle
-                            </a>
+                            </button>
                         </div>
                     </div>
 
@@ -542,6 +592,130 @@ $message = get_message();
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toplu Düzenleme Modal -->
+    <div class="modal fade" id="bulkEditModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Toplu Metin Düzenleme</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo generate_csrf_token(); ?>">
+                    <input type="hidden" name="bulk_update" value="1">
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Metin Anahtarı</th>
+                                        <th>Mevcut Değer</th>
+                                        <th>Yeni Değer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($texts as $text): ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?php echo htmlspecialchars($text['text_key']); ?></strong>
+                                            <br><small class="text-muted"><?php echo htmlspecialchars($text['description']); ?></small>
+                                        </td>
+                                        <td>
+                                            <div class="text-preview" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                                                <?php echo htmlspecialchars($text['text_value']); ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <textarea class="form-control form-control-sm" name="texts[<?php echo $text['id']; ?>]" rows="2"><?php echo htmlspecialchars($text['text_value']); ?></textarea>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-admin">
+                            <i class="fas fa-save me-2"></i>Değişiklikleri Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yeni Metin Ekleme Modal -->
+    <div class="modal fade" id="addTextModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Metin Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo generate_csrf_token(); ?>">
+                    <input type="hidden" name="add_text" value="1">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="text_key" class="form-label">Metin Anahtarı *</label>
+                            <input type="text" class="form-control" id="text_key" name="text_key" required>
+                            <small class="text-muted">Örnek: hero_title, about_description</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="text_value" class="form-label">Metin Değeri *</label>
+                            <textarea class="form-control" id="text_value" name="text_value" rows="3" required></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="page_name" class="form-label">Sayfa</label>
+                                    <select class="form-select" id="page_name" name="page_name">
+                                        <option value="">Genel</option>
+                                        <option value="home">Ana Sayfa</option>
+                                        <option value="about">Hakkımda</option>
+                                        <option value="services">Hizmetler</option>
+                                        <option value="portfolio">Portföy</option>
+                                        <option value="gallery">Galeri</option>
+                                        <option value="contact">İletişim</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="section" class="form-label">Bölüm</label>
+                                    <select class="form-select" id="section" name="section">
+                                        <option value="">Genel</option>
+                                        <option value="hero">Hero</option>
+                                        <option value="header">Başlık</option>
+                                        <option value="content">İçerik</option>
+                                        <option value="footer">Alt Bilgi</option>
+                                        <option value="buttons">Butonlar</option>
+                                        <option value="messages">Mesajlar</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Açıklama</label>
+                            <input type="text" class="form-control" id="description" name="description">
+                            <small class="text-muted">Bu metnin ne için kullanıldığını açıklayın</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-admin">
+                            <i class="fas fa-plus me-2"></i>Metin Ekle
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
