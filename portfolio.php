@@ -6,6 +6,9 @@
  * Portföy Sayfası
  */
 
+// Config dosyasını dahil et
+require_once 'includes/config.php';
+
 // Sayfa meta bilgileri
 $page_title = get_site_text('portfolio_title', 'Portföyüm - BonusBoss');
 $page_description = get_site_text('portfolio_subtitle', 'Başarıyla tamamladığımız projeler');

@@ -6,6 +6,9 @@
  * Galeri Sayfası
  */
 
+// Config dosyasını dahil et
+require_once 'includes/config.php';
+
 // Sayfa meta bilgileri
 $page_title = get_site_text('gallery_title', 'Galeri - BonusBoss');
 $page_description = get_site_text('gallery_subtitle', 'Çalışmalarımızdan görsel örnekler');

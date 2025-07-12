@@ -6,7 +6,7 @@
  * Header dosyası
  */
 
-require_once 'config.php';
+require_once __DIR__ . '/config.php';
 
 // Sayfa başlığı ve meta bilgileri
 $page_title = isset($page_title) ? $page_title : '';

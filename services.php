@@ -6,6 +6,9 @@
  * Hizmetler Sayfası
  */
 
+// Config dosyasını dahil et
+require_once 'includes/config.php';
+
 // Sayfa meta bilgileri
 $page_title = get_site_text('services_title', 'Hizmetlerim - BonusBoss');
 $page_description = get_site_text('services_subtitle', 'Size sunduğumuz kapsamlı hizmetler');

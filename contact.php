@@ -6,6 +6,9 @@
  * İletişim Sayfası
  */
 
+// Config dosyasını dahil et
+require_once 'includes/config.php';
+
 // Sayfa meta bilgileri
 $page_title = get_site_text('contact_title', 'İletişim - BonusBoss');
 $page_description = get_site_text('contact_subtitle', 'Bizimle iletişime geçin');

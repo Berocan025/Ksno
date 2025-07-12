@@ -6,6 +6,9 @@
  * Ana Sayfa
  */
 
+// Config dosyasını dahil et
+require_once 'includes/config.php';
+
 // Sayfa meta bilgileri
 $page_title = get_site_text('hero_title', 'BonusBoss - Profesyonel Casino Yayıncısı');
 $page_description = get_site_text('hero_description', 'Casino dünyasında güvenilir ve profesyonel hizmet anlayışıyla, sizin başarınız için çalışıyoruz.');
