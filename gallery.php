@@ -1,381 +1,180 @@
 <?php
-/**
- * BonusBoss Casino Yayıncısı Portföy Sitesi
- * Yazılımcı: BERAT K
- * 
- * Galeri Sayfası
- */
+require_once 'config.php';
 
-// Config dosyasını dahil et
-require_once 'includes/config.php';
-
-// Sayfa meta bilgileri
-$page_title = get_site_text('gallery_title', 'Galeri - BonusBoss');
-$page_description = get_site_text('gallery_subtitle', 'Çalışmalarımızdan görsel örnekler');
-$page_keywords = 'galeri, fotoğraf, video, casino, yayıncı, bonusboss';
-
-// Header'ı dahil et
-include 'includes/header.php';
-
-// Kategorileri getir
-$categories_query = "SELECT * FROM categories WHERE type = 'gallery' AND is_active = 1 ORDER BY sort_order ASC";
-$categories_result = $conn->query($categories_query);
-
-// Aktif kategori filtresi
-$active_category = isset($_GET['category']) ? clean_input($_GET['category']) : 'all';
-
-// Fotoğrafları getir
-$photos_query = "SELECT p.*, c.name as category_name, c.slug as category_slug 
-                FROM gallery_photos p 
-                LEFT JOIN categories c ON p.category_id = c.id 
-                WHERE p.is_active = 1";
-
-if ($active_category !== 'all') {
-    $photos_query .= " AND c.slug = '" . $conn->real_escape_string($active_category) . "'";
+// Galeri fotoğraflarını al
+try {
+    $stmt = $pdo->prepare("SELECT * FROM gallery_photos WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC");
+    $stmt->execute();
+    $photos = $stmt->fetchAll();
+} catch (Exception $e) {
+    $photos = [];
 }
 
-$photos_query .= " ORDER BY p.sort_order ASC, p.created_at DESC";
-$photos_result = $conn->query($photos_query);
-
-// Videoları getir
-$videos_query = "SELECT v.*, c.name as category_name, c.slug as category_slug 
-                FROM gallery_videos v 
-                LEFT JOIN categories c ON v.category_id = c.id 
-                WHERE v.is_active = 1";
-
-if ($active_category !== 'all') {
-    $videos_query .= " AND c.slug = '" . $conn->real_escape_string($active_category) . "'";
+// Galeri videolarını al
+try {
+    $stmt = $pdo->prepare("SELECT * FROM gallery_videos WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC");
+    $stmt->execute();
+    $videos = $stmt->fetchAll();
+} catch (Exception $e) {
+    $videos = [];
 }
 
-$videos_query .= " ORDER BY v.sort_order ASC, v.created_at DESC";
-$videos_result = $conn->query($videos_query);
+$page_title = 'Galeri';
+include 'header.php';
 ?>
 
-<!-- Page Header -->
-<section class="page-header bg-gradient-dark">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12 text-center">
-                <h1 class="page-title" data-aos="fade-up">
-                    <?php echo get_site_text('gallery_title', 'Galeri'); ?>
-                </h1>
-                <p class="page-subtitle" data-aos="fade-up" data-aos-delay="200">
-                    <?php echo get_site_text('gallery_subtitle', 'Çalışmalarımızdan görsel örnekler'); ?>
-                </p>
-            </div>
-        </div>
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-content">
+        <h1>Galeri</h1>
+        <h2>Çalışmalarımızdan Örnekler</h2>
+        <p>Casino yayıncılığında uzmanlaşmış ekibimizin en iyi anlarından seçmeler</p>
     </div>
 </section>
 
-<!-- Gallery Filter -->
-<section class="section">
+<!-- Gallery Section -->
+<section class="section gallery">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-12 text-center">
-                <div class="gallery-filter" data-aos="fade-up">
-                    <button class="filter-btn <?php echo $active_category === 'all' ? 'active' : ''; ?>" data-filter="all">
-                        <?php echo get_site_text('gallery_filter_all', 'Tümü'); ?>
-                    </button>
-                    <button class="filter-btn <?php echo $active_category === 'photos' ? 'active' : ''; ?>" data-filter="photos">
-                        <?php echo get_site_text('gallery_filter_photos', 'Fotoğraflar'); ?>
-                    </button>
-                    <button class="filter-btn <?php echo $active_category === 'videos' ? 'active' : ''; ?>" data-filter="videos">
-                        <?php echo get_site_text('gallery_filter_videos', 'Videolar'); ?>
-                    </button>
-                    <?php 
-                    if ($categories_result && $categories_result->num_rows > 0):
-                        while ($category = $categories_result->fetch_assoc()):
-                    ?>
-                    <button class="filter-btn <?php echo $active_category === $category['slug'] ? 'active' : ''; ?>" data-filter="<?php echo $category['slug']; ?>">
-                        <?php echo $category['name']; ?>
-                    </button>
-                    <?php 
-                        endwhile;
-                    endif;
-                    ?>
-                </div>
-            </div>
+        <div class="section-title">
+            <h2>Fotoğraf Galerisi</h2>
+            <p>Canlı yayınlarımızdan en güzel kareler</p>
         </div>
+
+        <?php if (!empty($photos)): ?>
+        <div class="gallery-grid">
+            <?php foreach ($photos as $photo): ?>
+            <div class="gallery-item" onclick="openLightbox('<?= htmlspecialchars($photo['image_path']) ?>', '<?= htmlspecialchars($photo['title'] ?? '') ?>')">
+                <img src="<?= htmlspecialchars($photo['image_path']) ?>" 
+                     alt="<?= htmlspecialchars($photo['alt_text'] ?? $photo['title'] ?? 'Galeri Fotoğrafı') ?>" 
+                     class="gallery-image">
+                <div class="gallery-overlay">
+                    <i class="fas fa-search-plus"></i>
+                </div>
+                <?php if ($photo['title']): ?>
+                <div class="gallery-caption">
+                    <h4><?= htmlspecialchars($photo['title']) ?></h4>
+                    <?php if ($photo['description']): ?>
+                    <p><?= htmlspecialchars($photo['description']) ?></p>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="text-center">
+            <i class="fas fa-images fa-3x text-muted mb-3"></i>
+            <h5>Henüz fotoğraf bulunmuyor</h5>
+            <p class="text-muted">Yakında güzel fotoğraflarımızı görebileceksiniz.</p>
+        </div>
+        <?php endif; ?>
     </div>
 </section>
 
-<!-- Gallery Grid -->
-<section class="section">
+<!-- Video Gallery Section -->
+<section class="section gallery" style="background: var(--bg-darker);">
     <div class="container">
-        <div class="row">
-            <?php 
-            // Fotoğrafları göster
-            if ($photos_result && $photos_result->num_rows > 0):
-                while ($photo = $photos_result->fetch_assoc()):
-            ?>
-            <div class="col-lg-4 col-md-6 mb-4 gallery-item photo-item" data-category="<?php echo $photo['category_slug']; ?>" data-aos="fade-up">
-                <div class="gallery-card">
-                    <div class="gallery-image">
-                        <img src="assets/uploads/<?php echo $photo['image']; ?>" alt="<?php echo $photo['title']; ?>" class="img-fluid">
-                        <div class="gallery-overlay">
-                            <div class="gallery-overlay-content">
-                                <h4><?php echo $photo['title']; ?></h4>
-                                <p><?php echo $photo['category_name']; ?></p>
-                                <a href="assets/uploads/<?php echo $photo['image']; ?>" class="btn btn-primary btn-sm" data-fancybox="gallery" data-caption="<?php echo $photo['title']; ?>">
-                                    <i class="fas fa-search"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="gallery-content">
-                        <h3 class="gallery-title"><?php echo $photo['title']; ?></h3>
-                        <p class="gallery-category"><?php echo $photo['category_name']; ?></p>
-                        <?php if ($photo['description']): ?>
-                        <p class="gallery-description"><?php echo $photo['description']; ?></p>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <?php 
-                endwhile;
-            endif;
-            
-            // Videoları göster
-            if ($videos_result && $videos_result->num_rows > 0):
-                while ($video = $videos_result->fetch_assoc()):
-            ?>
-            <div class="col-lg-4 col-md-6 mb-4 gallery-item video-item" data-category="<?php echo $video['category_slug']; ?>" data-aos="fade-up">
-                <div class="gallery-card">
-                    <div class="gallery-image">
-                        <?php if ($video['thumbnail']): ?>
-                        <img src="assets/uploads/<?php echo $video['thumbnail']; ?>" alt="<?php echo $video['title']; ?>" class="img-fluid">
-                        <?php else: ?>
-                        <img src="assets/images/video-placeholder.jpg" alt="<?php echo $video['title']; ?>" class="img-fluid">
-                        <?php endif; ?>
-                        <div class="gallery-overlay">
-                            <div class="gallery-overlay-content">
-                                <h4><?php echo $video['title']; ?></h4>
-                                <p><?php echo $video['category_name']; ?></p>
-                                <a href="<?php echo $video['video_url']; ?>" class="btn btn-primary btn-sm" data-fancybox="gallery" data-caption="<?php echo $video['title']; ?>">
-                                    <i class="fas fa-play"></i>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="video-play-icon">
-                            <i class="fas fa-play"></i>
-                        </div>
-                    </div>
-                    <div class="gallery-content">
-                        <h3 class="gallery-title"><?php echo $video['title']; ?></h3>
-                        <p class="gallery-category"><?php echo $video['category_name']; ?></p>
-                        <?php if ($video['description']): ?>
-                        <p class="gallery-description"><?php echo $video['description']; ?></p>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <?php 
-                endwhile;
-            endif;
-            
-            // Eğer hiç içerik yoksa varsayılan içerik göster
-            if ((!$photos_result || $photos_result->num_rows == 0) && (!$videos_result || $videos_result->num_rows == 0)):
-            ?>
-            <!-- Varsayılan galeri içeriği -->
-            <div class="col-lg-4 col-md-6 mb-4 gallery-item photo-item" data-category="photos" data-aos="fade-up">
-                <div class="gallery-card">
-                    <div class="gallery-image">
-                        <img src="assets/images/gallery-1.jpg" alt="Casino Yayın" class="img-fluid">
-                        <div class="gallery-overlay">
-                            <div class="gallery-overlay-content">
-                                <h4>Casino Yayın</h4>
-                                <p>Fotoğraflar</p>
-                                <a href="assets/images/gallery-1.jpg" class="btn btn-primary btn-sm" data-fancybox="gallery" data-caption="Casino Yayın">
-                                    <i class="fas fa-search"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Casino Yayın</h3>
-                        <p class="gallery-category">Fotoğraflar</p>
-                        <p class="gallery-description">Profesyonel casino yayın seti</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 col-md-6 mb-4 gallery-item photo-item" data-category="photos" data-aos="fade-up">
-                <div class="gallery-card">
-                    <div class="gallery-image">
-                        <img src="assets/images/gallery-2.jpg" alt="Sosyal Medya" class="img-fluid">
-                        <div class="gallery-overlay">
-                            <div class="gallery-overlay-content">
-                                <h4>Sosyal Medya</h4>
-                                <p>Fotoğraflar</p>
-                                <a href="assets/images/gallery-2.jpg" class="btn btn-primary btn-sm" data-fancybox="gallery" data-caption="Sosyal Medya">
-                                    <i class="fas fa-search"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Sosyal Medya</h3>
-                        <p class="gallery-category">Fotoğraflar</p>
-                        <p class="gallery-description">Sosyal medya kampanyaları</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 col-md-6 mb-4 gallery-item photo-item" data-category="photos" data-aos="fade-up">
-                <div class="gallery-card">
-                    <div class="gallery-image">
-                        <img src="assets/images/gallery-3.jpg" alt="Pazarlama" class="img-fluid">
-                        <div class="gallery-overlay">
-                            <div class="gallery-overlay-content">
-                                <h4>Pazarlama</h4>
-                                <p>Fotoğraflar</p>
-                                <a href="assets/images/gallery-3.jpg" class="btn btn-primary btn-sm" data-fancybox="gallery" data-caption="Pazarlama">
-                                    <i class="fas fa-search"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Pazarlama</h3>
-                        <p class="gallery-category">Fotoğraflar</p>
-                        <p class="gallery-description">Pazarlama kampanyaları</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 col-md-6 mb-4 gallery-item video-item" data-category="videos" data-aos="fade-up">
-                <div class="gallery-card">
-                    <div class="gallery-image">
-                        <img src="assets/images/video-1.jpg" alt="Canlı Yayın" class="img-fluid">
-                        <div class="gallery-overlay">
-                            <div class="gallery-overlay-content">
-                                <h4>Canlı Yayın</h4>
-                                <p>Videolar</p>
-                                <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" class="btn btn-primary btn-sm" data-fancybox="gallery" data-caption="Canlı Yayın">
-                                    <i class="fas fa-play"></i>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="video-play-icon">
-                            <i class="fas fa-play"></i>
-                        </div>
-                    </div>
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Canlı Yayın</h3>
-                        <p class="gallery-category">Videolar</p>
-                        <p class="gallery-description">Profesyonel canlı yayın örneği</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 col-md-6 mb-4 gallery-item video-item" data-category="videos" data-aos="fade-up">
-                <div class="gallery-card">
-                    <div class="gallery-image">
-                        <img src="assets/images/video-2.jpg" alt="Promosyon" class="img-fluid">
-                        <div class="gallery-overlay">
-                            <div class="gallery-overlay-content">
-                                <h4>Promosyon</h4>
-                                <p>Videolar</p>
-                                <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" class="btn btn-primary btn-sm" data-fancybox="gallery" data-caption="Promosyon">
-                                    <i class="fas fa-play"></i>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="video-play-icon">
-                            <i class="fas fa-play"></i>
-                        </div>
-                    </div>
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Promosyon</h3>
-                        <p class="gallery-category">Videolar</p>
-                        <p class="gallery-description">Casino promosyon videosu</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 col-md-6 mb-4 gallery-item video-item" data-category="videos" data-aos="fade-up">
-                <div class="gallery-card">
-                    <div class="gallery-image">
-                        <img src="assets/images/video-3.jpg" alt="Eğitim" class="img-fluid">
-                        <div class="gallery-overlay">
-                            <div class="gallery-overlay-content">
-                                <h4>Eğitim</h4>
-                                <p>Videolar</p>
-                                <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" class="btn btn-primary btn-sm" data-fancybox="gallery" data-caption="Eğitim">
-                                    <i class="fas fa-play"></i>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="video-play-icon">
-                            <i class="fas fa-play"></i>
-                        </div>
-                    </div>
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Eğitim</h3>
-                        <p class="gallery-category">Videolar</p>
-                        <p class="gallery-description">Eğitim ve tanıtım videosu</p>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
+        <div class="section-title">
+            <h2>Video Galerisi</h2>
+            <p>En iyi casino yayın anlarımızdan videolar</p>
         </div>
+
+        <?php if (!empty($videos)): ?>
+        <div class="gallery-grid">
+            <?php foreach ($videos as $video): ?>
+            <div class="gallery-item" onclick="openVideoModal('<?= htmlspecialchars($video['video_url']) ?>', '<?= htmlspecialchars($video['title'] ?? '') ?>')">
+                <?php if ($video['thumbnail_path']): ?>
+                <img src="<?= htmlspecialchars($video['thumbnail_path']) ?>" 
+                     alt="<?= htmlspecialchars($video['title'] ?? 'Video') ?>" 
+                     class="gallery-image">
+                <?php else: ?>
+                <div class="gallery-image bg-dark d-flex align-items-center justify-content-center">
+                    <i class="fas fa-play fa-3x text-primary"></i>
+                </div>
+                <?php endif; ?>
+                <div class="gallery-overlay">
+                    <i class="fas fa-play"></i>
+                </div>
+                <?php if ($video['title']): ?>
+                <div class="gallery-caption">
+                    <h4><?= htmlspecialchars($video['title']) ?></h4>
+                    <?php if ($video['description']): ?>
+                    <p><?= htmlspecialchars($video['description']) ?></p>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="text-center">
+            <i class="fas fa-video fa-3x text-muted mb-3"></i>
+            <h5>Henüz video bulunmuyor</h5>
+            <p class="text-muted">Yakında harika videolarımızı görebileceksiniz.</p>
+        </div>
+        <?php endif; ?>
     </div>
 </section>
 
-<!-- CTA Section -->
-<section class="cta-section bg-gradient-primary">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12 text-center">
-                <h2 class="cta-title" data-aos="fade-up">
-                    Daha Fazlasını Görün!
-                </h2>
-                <p class="cta-description" data-aos="fade-up" data-aos-delay="200">
-                    Çalışmalarımızdan daha fazla örnek görmek için portföyümüzü inceleyin.
-                </p>
-                <div class="cta-buttons" data-aos="fade-up" data-aos-delay="400">
-                    <a href="portfolio.php" class="btn btn-hero btn-hero-primary">
-                        <i class="fas fa-eye me-2"></i>
-                        Portföyümü Gör
-                    </a>
-                    <a href="contact.php" class="btn btn-hero btn-hero-secondary">
-                        <i class="fas fa-envelope me-2"></i>
-                        İletişime Geç
-                    </a>
+<!-- Lightbox Modal -->
+<div class="modal fade" id="lightboxModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lightboxTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="lightboxImage" src="" alt="" style="max-width: 100%; height: auto;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Video Modal -->
+<div class="modal fade" id="videoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="ratio ratio-16x9">
+                    <iframe id="videoIframe" src="" frameborder="0" allowfullscreen></iframe>
                 </div>
             </div>
         </div>
     </div>
-</section>
+</div>
 
 <script>
-// Gallery filter functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    const galleryItems = document.querySelectorAll('.gallery-item');
+function openLightbox(imageSrc, title) {
+    document.getElementById('lightboxImage').src = imageSrc;
+    document.getElementById('lightboxTitle').textContent = title;
+    new bootstrap.Modal(document.getElementById('lightboxModal')).show();
+}
+
+function openVideoModal(videoUrl, title) {
+    // YouTube URL'sini embed URL'sine çevir
+    let embedUrl = videoUrl;
+    if (videoUrl.includes('youtube.com/watch?v=')) {
+        const videoId = videoUrl.split('v=')[1];
+        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    } else if (videoUrl.includes('youtu.be/')) {
+        const videoId = videoUrl.split('youtu.be/')[1];
+        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    }
     
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const filter = this.getAttribute('data-filter');
-            
-            // Update active button
-            filterBtns.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Filter items
-            galleryItems.forEach(item => {
-                if (filter === 'all' || item.getAttribute('data-category') === filter) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    });
+    document.getElementById('videoIframe').src = embedUrl;
+    document.getElementById('videoTitle').textContent = title;
+    new bootstrap.Modal(document.getElementById('videoModal')).show();
+}
+
+// Modal kapandığında video'yu durdur
+document.getElementById('videoModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('videoIframe').src = '';
 });
 </script>
 
-<?php
-// Footer'ı dahil et
-include 'includes/footer.php';
-?>
+<?php include 'footer.php'; ?>
