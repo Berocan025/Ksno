@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Admin panelini engelle
+Disallow: /admin/
+
+# Uploads klasörünü engelle (gerekirse)
+Disallow: /assets/uploads/
+
+# Config dosyalarını engelle
+Disallow: /includes/
+Disallow: /database/
+
+# Sitemap
+Sitemap: https://siteniz.com/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
